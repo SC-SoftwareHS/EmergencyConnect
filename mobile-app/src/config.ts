@@ -1,5 +1,3 @@
-import Constants from 'expo-constants';
-
 // Default API URL - replace with your server URL when testing
 // For Expo Go, you can use your computer's local network IP address
 // For example: 'http://192.168.1.100:5000'
@@ -10,11 +8,9 @@ const DEFAULT_API_URL = 'https://workspace.graftssalable0o.replit.app';
 
 // Function to get the API URL from environment variables or use default
 export const getApiUrl = (): string => {
-  // Try to get from Expo Constants (app.json or app.config.js)
-  const envApiUrl = Constants.expoConfig?.extra?.apiUrl;
-  
-  // Return the environment variable value or fall back to default
-  return envApiUrl || DEFAULT_API_URL;
+  // Return the default URL for now
+  // This is a temporary fix until we resolve the expo-constants dependency
+  return DEFAULT_API_URL;
 };
 
 // API configuration object
