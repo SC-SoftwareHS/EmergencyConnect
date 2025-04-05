@@ -360,8 +360,13 @@ const identifyRecipients = async (targeting) => {
   const allUsers = userDB.getAll();
   
   // If targeting specific users, add them to recipients
-  if (targeting.specific && Array.isArray(targeting.specific)) {
-    targeting.specific.forEach(userId => {
+  if ((targeting.specific && Array.isArray(targeting.specific)) || 
+      (targeting.userIds && Array.isArray(targeting.userIds))) {
+    
+    // Support both 'specific' and 'userIds' for backward compatibility
+    const userIdList = targeting.userIds || targeting.specific;
+    
+    userIdList.forEach(userId => {
       const user = userDB.findById(parseInt(userId));
       if (user) {
         recipients.add(user);
