@@ -13,7 +13,7 @@
 ### Admin Role
 - [x] Login
 - [x] View Dashboard with Analytics
-- [ ] Create New Alert
+- [x] Create New Alert
 - [x] Manage Incidents
 - [ ] Manage Users
 - [ ] View Alert Acknowledgments
@@ -23,7 +23,7 @@
 ### Operator Role
 - [ ] Login
 - [ ] View Operator Dashboard
-- [ ] Create New Alert
+- [x] Create New Alert
 - [x] Manage Incidents
 - [ ] View Alert Acknowledgments
 - [ ] Cancel Pending Alerts
