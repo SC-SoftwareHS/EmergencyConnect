@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 // For production, use your deployed server URL
 // If you've deployed on Replit, use your Replit URL:
 // https://your-repl-name.replit.app
-const DEFAULT_API_URL = 'https://emergency-alert-system.replit.app';
+const DEFAULT_API_URL = 'https://workspace.replit.app';
 
 // Function to get the API URL from environment variables or use default
 export const getApiUrl = (): string => {
