@@ -1,0 +1,271 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "webAppName": {
+      "type": "string",
+      "defaultValue": "emergency-alert-system",
+      "metadata": {
+        "description": "Base name of the web app that hosts the Emergency Alert System"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "defaultValue": "B1",
+      "allowedValues": [
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1V2",
+        "P2V2",
+        "P3V2"
+      ],
+      "metadata": {
+        "description": "The pricing tier for the hosting plan"
+      }
+    },
+    "databaseServerName": {
+      "type": "string",
+      "defaultValue": "[concat('db-', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name of the PostgreSQL server"
+      }
+    },
+    "databaseName": {
+      "type": "string",
+      "defaultValue": "emergencyalertsystem",
+      "metadata": {
+        "description": "Name of the PostgreSQL database"
+      }
+    },
+    "databaseAdminUsername": {
+      "type": "string",
+      "defaultValue": "dbadmin",
+      "metadata": {
+        "description": "Administrator username for PostgreSQL server"
+      }
+    },
+    "databaseAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Administrator password for PostgreSQL server"
+      }
+    },
+    "jwtSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Secret key for JWT authentication"
+      }
+    },
+    "sendgridApiKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "SendGrid API Key for email notifications"
+      }
+    },
+    "sendgridFromEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "SendGrid verified sender email"
+      }
+    },
+    "twilioAccountSid": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Twilio Account SID for SMS notifications"
+      }
+    },
+    "twilioAuthToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Twilio Auth Token for SMS notifications"
+      }
+    },
+    "twilioPhoneNumber": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Twilio Phone Number for SMS notifications"
+      }
+    }
+  },
+  "variables": {
+    "hostingPlanName": "[concat(parameters('webAppName'), '-plan')]",
+    "webSiteName": "[parameters('webAppName')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('sku')]"
+      },
+      "kind": "linux",
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('webSiteName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('databaseServerName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/servers/databases', parameters('databaseServerName'), parameters('databaseName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "siteConfig": {
+          "linuxFxVersion": "NODE|16-lts",
+          "alwaysOn": true,
+          "webSocketsEnabled": true,
+          "appSettings": [
+            {
+              "name": "DATABASE_URL",
+              "value": "[concat('postgres://', parameters('databaseAdminUsername'), ':', parameters('databaseAdminPassword'), '@', parameters('databaseServerName'), '.postgres.database.azure.com:5432/', parameters('databaseName'), '?sslmode=require')]"
+            },
+            {
+              "name": "PGUSER",
+              "value": "[parameters('databaseAdminUsername')]"
+            },
+            {
+              "name": "PGPASSWORD",
+              "value": "[parameters('databaseAdminPassword')]"
+            },
+            {
+              "name": "PGHOST",
+              "value": "[concat(parameters('databaseServerName'), '.postgres.database.azure.com')]"
+            },
+            {
+              "name": "PGPORT",
+              "value": "5432"
+            },
+            {
+              "name": "PGDATABASE",
+              "value": "[parameters('databaseName')]"
+            },
+            {
+              "name": "JWT_SECRET",
+              "value": "[parameters('jwtSecret')]"
+            },
+            {
+              "name": "SENDGRID_API_KEY",
+              "value": "[parameters('sendgridApiKey')]"
+            },
+            {
+              "name": "SENDGRID_FROM_EMAIL",
+              "value": "[parameters('sendgridFromEmail')]"
+            },
+            {
+              "name": "TWILIO_ACCOUNT_SID",
+              "value": "[parameters('twilioAccountSid')]"
+            },
+            {
+              "name": "TWILIO_AUTH_TOKEN",
+              "value": "[parameters('twilioAuthToken')]"
+            },
+            {
+              "name": "TWILIO_PHONE_NUMBER",
+              "value": "[parameters('twilioPhoneNumber')]"
+            },
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "16-lts"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/servers",
+      "apiVersion": "2017-12-01",
+      "name": "[parameters('databaseServerName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "GP_Gen5_2",
+        "tier": "GeneralPurpose",
+        "capacity": 2,
+        "family": "Gen5"
+      },
+      "properties": {
+        "version": "11",
+        "administratorLogin": "[parameters('databaseAdminUsername')]",
+        "administratorLoginPassword": "[parameters('databaseAdminPassword')]",
+        "sslEnforcement": "Enabled",
+        "storageProfile": {
+          "storageMB": 5120,
+          "backupRetentionDays": 7,
+          "geoRedundantBackup": "Disabled",
+          "storageAutogrow": "Enabled"
+        }
+      },
+      "resources": [
+        {
+          "type": "firewallRules",
+          "apiVersion": "2017-12-01",
+          "name": "AllowAllAzureIPs",
+          "dependsOn": [
+            "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('databaseServerName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/servers/databases",
+      "apiVersion": "2017-12-01",
+      "name": "[concat(parameters('databaseServerName'), '/', parameters('databaseName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('databaseServerName'))]"
+      ],
+      "properties": {
+        "charset": "utf8",
+        "collation": "en_US.utf8"
+      }
+    }
+  ],
+  "outputs": {
+    "webAppName": {
+      "type": "string",
+      "value": "[variables('webSiteName')]"
+    },
+    "webAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webSiteName'))).defaultHostName)]"
+    },
+    "databaseServer": {
+      "type": "string",
+      "value": "[concat(parameters('databaseServerName'), '.postgres.database.azure.com')]"
+    },
+    "databaseName": {
+      "type": "string",
+      "value": "[parameters('databaseName')]"
+    }
+  }
+}

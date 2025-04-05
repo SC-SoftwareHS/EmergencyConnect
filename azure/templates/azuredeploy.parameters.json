@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "webAppName": {
+      "value": "emergency-alert-system"
+    },
+    "databaseServerName": {
+      "value": "emergency-alert-db"
+    },
+    "databaseName": {
+      "value": "emergencyalertsystem"
+    },
+    "databaseAdminUsername": {
+      "value": "dbadmin"
+    },
+    "databaseAdminPassword": {
+      "value": "P@ssw0rd$123"
+    },
+    "jwtSecret": {
+      "value": "your-strong-jwt-secret-key-replace-this-in-production"
+    },
+    "sendgridApiKey": {
+      "value": ""
+    },
+    "sendgridFromEmail": {
+      "value": ""
+    },
+    "twilioAccountSid": {
+      "value": ""
+    },
+    "twilioAuthToken": {
+      "value": ""
+    },
+    "twilioPhoneNumber": {
+      "value": ""
+    }
+  }
+}
