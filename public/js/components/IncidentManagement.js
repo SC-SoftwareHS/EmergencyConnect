@@ -65,32 +65,32 @@ const IncidentManagement = (() => {
             </div>
           </div>
           
-          <div class="col-md-8">
+          <div class="lg:col-span-2">
             <div id="incident-form-container" style="display: none;">
-              <div class="card">
-                <div class="card-header">
-                  <h3>Report Incident</h3>
+              <div class="bg-white rounded-lg shadow">
+                <div class="px-4 py-3 border-b border-gray-200">
+                  <h3 class="text-lg font-medium text-gray-900">Report Incident</h3>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                   <form id="incident-form">
-                    <div class="form-group mb-3">
-                      <label for="incident-title">Title</label>
-                      <input type="text" id="incident-title" class="form-control" required>
+                    <div class="mb-4">
+                      <label for="incident-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                      <input type="text" id="incident-title" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" required>
                     </div>
                     
-                    <div class="form-group mb-3">
-                      <label for="incident-description">Description</label>
-                      <textarea id="incident-description" class="form-control" rows="3" required></textarea>
+                    <div class="mb-4">
+                      <label for="incident-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <textarea id="incident-description" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" rows="3" required></textarea>
                     </div>
                     
-                    <div class="form-group mb-3">
-                      <label for="incident-location">Location</label>
-                      <input type="text" id="incident-location" class="form-control" required>
+                    <div class="mb-4">
+                      <label for="incident-location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                      <input type="text" id="incident-location" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" required>
                     </div>
                     
-                    <div class="form-group mb-3">
-                      <label for="incident-severity">Severity</label>
-                      <select id="incident-severity" class="form-control" required>
+                    <div class="mb-4">
+                      <label for="incident-severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+                      <select id="incident-severity" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" required>
                         <option value="">-- Select Severity --</option>
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -99,9 +99,9 @@ const IncidentManagement = (() => {
                       </select>
                     </div>
                     
-                    <div class="text-end">
-                      <button type="button" id="cancel-incident-btn" class="btn btn-secondary">Cancel</button>
-                      <button type="submit" class="btn btn-primary">Submit</button>
+                    <div class="flex justify-end space-x-2">
+                      <button type="button" id="cancel-incident-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Submit</button>
                     </div>
                   </form>
                 </div>
@@ -109,34 +109,34 @@ const IncidentManagement = (() => {
             </div>
             
             <div id="incident-details-container" style="display: none;">
-              <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <h3>Incident Details</h3>
-                  <div class="btn-group">
-                    <button id="create-alert-btn" class="btn btn-sm btn-warning">Create Alert</button>
-                    <button id="update-status-btn" class="btn btn-sm btn-primary">Update Status</button>
+              <div class="bg-white rounded-lg shadow">
+                <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                  <h3 class="text-lg font-medium text-gray-900">Incident Details</h3>
+                  <div class="flex space-x-2">
+                    <button id="create-alert-btn" class="px-3 py-1 text-sm bg-yellow-500 text-white rounded-md hover:bg-yellow-600">Create Alert</button>
+                    <button id="update-status-btn" class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Update Status</button>
                   </div>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                   <div id="incident-details"></div>
                   
-                  <div class="mt-4">
-                    <h4>Response Actions</h4>
+                  <div class="mt-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-2">Response Actions</h4>
                     <div id="incident-responses" class="mb-3"></div>
                     
                     <form id="response-form" class="mb-3">
-                      <div class="input-group">
-                        <input type="text" id="response-action" class="form-control" placeholder="Add a response action..." required>
-                        <button type="submit" class="btn btn-primary">Add</button>
+                      <div class="flex">
+                        <input type="text" id="response-action" class="flex-1 rounded-l-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="Add a response action..." required>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700">Add</button>
                       </div>
-                      <div class="form-text mt-1">
-                        <small>Provide a brief description of the action taken in response to this incident.</small>
+                      <div class="mt-1 text-xs text-gray-500">
+                        Provide a brief description of the action taken in response to this incident.
                       </div>
                     </form>
                   </div>
                   
-                  <div class="mt-4">
-                    <h4>Timeline</h4>
+                  <div class="mt-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-2">Timeline</h4>
                     <div id="incident-timeline"></div>
                   </div>
                 </div>
@@ -144,52 +144,56 @@ const IncidentManagement = (() => {
             </div>
             
             <div id="alert-form-container" style="display: none;">
-              <div class="card">
-                <div class="card-header">
-                  <h3>Create Alert from Incident</h3>
+              <div class="bg-white rounded-lg shadow">
+                <div class="px-4 py-3 border-b border-gray-200">
+                  <h3 class="text-lg font-medium text-gray-900">Create Alert from Incident</h3>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                   <form id="alert-from-incident-form">
-                    <div class="form-group mb-3">
-                      <label for="alert-message">Alert Message</label>
-                      <textarea id="alert-message" class="form-control" rows="3" required></textarea>
+                    <div class="mb-4">
+                      <label for="alert-message" class="block text-sm font-medium text-gray-700 mb-1">Alert Message</label>
+                      <textarea id="alert-message" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" rows="3" required></textarea>
                     </div>
                     
-                    <div class="form-group mb-3">
-                      <label>Notification Channels</label>
-                      <div class="form-check">
-                        <input type="checkbox" id="channel-email" class="form-check-input" value="email" checked>
-                        <label for="channel-email" class="form-check-label">Email</label>
-                      </div>
-                      <div class="form-check">
-                        <input type="checkbox" id="channel-sms" class="form-check-input" value="sms">
-                        <label for="channel-sms" class="form-check-label">SMS</label>
-                      </div>
-                      <div class="form-check">
-                        <input type="checkbox" id="channel-push" class="form-check-input" value="push">
-                        <label for="channel-push" class="form-check-label">Push Notification</label>
-                      </div>
-                    </div>
-                    
-                    <div class="form-group mb-3">
-                      <label>Target Recipients</label>
-                      <div class="form-check">
-                        <input type="checkbox" id="role-admin" class="form-check-input" value="admin" checked>
-                        <label for="role-admin" class="form-check-label">Administrators</label>
-                      </div>
-                      <div class="form-check">
-                        <input type="checkbox" id="role-operator" class="form-check-input" value="operator" checked>
-                        <label for="role-operator" class="form-check-label">Operators</label>
-                      </div>
-                      <div class="form-check">
-                        <input type="checkbox" id="role-subscriber" class="form-check-input" value="subscriber">
-                        <label for="role-subscriber" class="form-check-label">Subscribers</label>
+                    <div class="mb-4">
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Notification Channels</label>
+                      <div class="space-y-2">
+                        <div class="flex items-center">
+                          <input type="checkbox" id="channel-email" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="email" checked>
+                          <label for="channel-email" class="ml-2 text-sm text-gray-700">Email</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input type="checkbox" id="channel-sms" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="sms">
+                          <label for="channel-sms" class="ml-2 text-sm text-gray-700">SMS</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input type="checkbox" id="channel-push" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="push">
+                          <label for="channel-push" class="ml-2 text-sm text-gray-700">Push Notification</label>
+                        </div>
                       </div>
                     </div>
                     
-                    <div class="text-end">
-                      <button type="button" id="cancel-alert-btn" class="btn btn-secondary">Cancel</button>
-                      <button type="submit" class="btn btn-warning">Send Alert</button>
+                    <div class="mb-4">
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Target Recipients</label>
+                      <div class="space-y-2">
+                        <div class="flex items-center">
+                          <input type="checkbox" id="role-admin" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="admin" checked>
+                          <label for="role-admin" class="ml-2 text-sm text-gray-700">Administrators</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input type="checkbox" id="role-operator" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="operator" checked>
+                          <label for="role-operator" class="ml-2 text-sm text-gray-700">Operators</label>
+                        </div>
+                        <div class="flex items-center">
+                          <input type="checkbox" id="role-subscriber" class="rounded text-blue-600 focus:ring-blue-500 border-gray-300" value="subscriber">
+                          <label for="role-subscriber" class="ml-2 text-sm text-gray-700">Subscribers</label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                      <button type="button" id="cancel-alert-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                      <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">Send Alert</button>
                     </div>
                   </form>
                 </div>
@@ -197,15 +201,15 @@ const IncidentManagement = (() => {
             </div>
             
             <div id="status-form-container" style="display: none;">
-              <div class="card">
-                <div class="card-header">
-                  <h3>Update Incident Status</h3>
+              <div class="bg-white rounded-lg shadow">
+                <div class="px-4 py-3 border-b border-gray-200">
+                  <h3 class="text-lg font-medium text-gray-900">Update Incident Status</h3>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                   <form id="status-form">
-                    <div class="form-group mb-3">
-                      <label for="incident-status">New Status</label>
-                      <select id="incident-status" class="form-control" required>
+                    <div class="mb-4">
+                      <label for="incident-status" class="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                      <select id="incident-status" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" required>
                         <option value="">-- Select Status --</option>
                         <option value="reported">Reported</option>
                         <option value="investigating">Investigating</option>
@@ -214,14 +218,14 @@ const IncidentManagement = (() => {
                       </select>
                     </div>
                     
-                    <div class="form-group mb-3">
-                      <label for="status-notes">Notes</label>
-                      <textarea id="status-notes" class="form-control" rows="3"></textarea>
+                    <div class="mb-4">
+                      <label for="status-notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                      <textarea id="status-notes" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" rows="3"></textarea>
                     </div>
                     
-                    <div class="text-end">
-                      <button type="button" id="cancel-status-btn" class="btn btn-secondary">Cancel</button>
-                      <button type="submit" class="btn btn-primary">Update</button>
+                    <div class="flex justify-end space-x-2">
+                      <button type="button" id="cancel-status-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Update</button>
                     </div>
                   </form>
                 </div>
@@ -591,17 +595,17 @@ const IncidentManagement = (() => {
     
     // Generate HTML for each incident
     const html = filteredIncidents.map(incident => `
-      <a href="#" class="list-group-item list-group-item-action incident-item ${currentIncidentId === incident.id ? 'active' : ''}" 
+      <a href="#" class="block p-3 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150 incident-item ${currentIncidentId === incident.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}" 
          data-id="${incident.id}">
-        <div class="d-flex w-100 justify-content-between">
-          <h5 class="mb-1">${incident.title}</h5>
-          <small class="text-${getSeverityClass(incident.severity)}">${incident.severity.toUpperCase()}</small>
+        <div class="flex justify-between items-center mb-1">
+          <h5 class="font-medium text-gray-900">${incident.title}</h5>
+          <span class="text-${getSeverityClass(incident.severity)} text-xs font-medium">${incident.severity.toUpperCase()}</span>
         </div>
-        <div class="d-flex w-100 justify-content-between">
-          <small>${incident.location}</small>
-          <span class="badge bg-${getStatusClass(incident.status)}">${formatStatus(incident.status)}</span>
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-sm text-gray-600">${incident.location}</span>
+          <span class="px-2 py-1 text-xs rounded-full bg-${getStatusClass(incident.status)} text-white">${formatStatus(incident.status)}</span>
         </div>
-        <small>${formatDate(incident.reportedAt)}</small>
+        <span class="text-xs text-gray-500">${formatDate(incident.reportedAt)}</span>
       </a>
     `).join('');
     
@@ -673,32 +677,39 @@ const IncidentManagement = (() => {
     
     // Render details
     $incidentDetails.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>${incident.title}</h2>
-        <span class="badge bg-${getStatusClass(incident.status)} fs-6">${formatStatus(incident.status)}</span>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-900">${incident.title}</h2>
+        <span class="px-3 py-1 text-sm rounded-full bg-${getStatusClass(incident.status)} text-white">${formatStatus(incident.status)}</span>
       </div>
       
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <p><strong>Reported by:</strong> User ID ${incident.reportedBy}</p>
-          <p><strong>Location:</strong> ${incident.location}</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <p class="mb-2"><span class="font-medium text-gray-700">Reported by:</span> User ID ${incident.reportedBy}</p>
+          <p class="mb-2"><span class="font-medium text-gray-700">Location:</span> ${incident.location}</p>
         </div>
-        <div class="col-md-6">
-          <p><strong>Severity:</strong> <span class="text-${getSeverityClass(incident.severity)}">${incident.severity.toUpperCase()}</span></p>
-          <p><strong>Reported at:</strong> ${formatDate(incident.reportedAt)}</p>
+        <div>
+          <p class="mb-2">
+            <span class="font-medium text-gray-700">Severity:</span> 
+            <span class="text-${getSeverityClass(incident.severity)} font-medium">${incident.severity.toUpperCase()}</span>
+          </p>
+          <p class="mb-2"><span class="font-medium text-gray-700">Reported at:</span> ${formatDate(incident.reportedAt)}</p>
         </div>
       </div>
       
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5 class="card-title">Description</h5>
-          <p class="card-text">${incident.description}</p>
-        </div>
+      <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+        <h5 class="text-md font-medium text-gray-900 mb-2">Description</h5>
+        <p class="text-gray-700">${incident.description}</p>
       </div>
       
       ${incident.relatedAlertId ? `
-        <div class="alert alert-warning">
-          <strong>Alert issued:</strong> This incident has an associated alert (ID: ${incident.relatedAlertId}).
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div class="flex">
+            <div>
+              <p class="text-sm text-yellow-700">
+                <span class="font-bold">Alert issued:</span> This incident has an associated alert (ID: ${incident.relatedAlertId}).
+              </p>
+            </div>
+          </div>
         </div>
       ` : ''}
     `;
@@ -726,20 +737,18 @@ const IncidentManagement = (() => {
     const $responses = document.getElementById('incident-responses');
     
     if (!incident.responses || incident.responses.length === 0) {
-      $responses.innerHTML = '<div class="alert alert-info">No responses have been recorded yet.</div>';
+      $responses.innerHTML = '<div class="bg-blue-50 p-4 rounded-md text-blue-700 text-sm">No responses have been recorded yet.</div>';
       return;
     }
     
     const html = incident.responses.map(response => `
-      <div class="card mb-2">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="card-title mb-0">${response.action}</h6>
-            <small>${formatDate(response.timestamp)}</small>
-          </div>
-          ${response.notes ? `<p class="card-text mt-2">${response.notes}</p>` : ''}
-          <small class="text-muted">By User ${response.userId}</small>
+      <div class="bg-white p-3 rounded-lg border border-gray-200 mb-3">
+        <div class="flex justify-between items-center">
+          <h6 class="font-medium text-gray-900">${response.action}</h6>
+          <span class="text-xs text-gray-500">${formatDate(response.timestamp)}</span>
         </div>
+        ${response.notes ? `<p class="text-gray-700 text-sm mt-2">${response.notes}</p>` : ''}
+        <span class="text-xs text-gray-500 mt-2 block">By User ${response.userId}</span>
       </div>
     `).join('');
     
@@ -751,7 +760,7 @@ const IncidentManagement = (() => {
     const $timeline = document.getElementById('incident-timeline');
     
     if (!incident.timeline || incident.timeline.length === 0) {
-      $timeline.innerHTML = '<div class="alert alert-info">No timeline events recorded.</div>';
+      $timeline.innerHTML = '<div class="bg-blue-50 p-4 rounded-md text-blue-700 text-sm">No timeline events recorded.</div>';
       return;
     }
     
@@ -761,14 +770,17 @@ const IncidentManagement = (() => {
     );
     
     const html = sortedTimeline.map(event => `
-      <div class="timeline-item card mb-2">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">${formatTimelineAction(event.action)}</h6>
-            <small>${formatDate(event.timestamp)}</small>
+      <div class="relative pl-8 pb-5 border-l border-gray-200 last:border-l-0 last:pb-0">
+        <div class="absolute left-0 top-0 bg-white p-1 -translate-x-1/2">
+          <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-gray-200 ml-3">
+          <div class="flex justify-between items-center">
+            <h6 class="font-medium text-gray-900">${formatTimelineAction(event.action)}</h6>
+            <span class="text-xs text-gray-500">${formatDate(event.timestamp)}</span>
           </div>
-          ${event.notes ? `<p class="card-text mt-2">${event.notes}</p>` : ''}
-          <small class="text-muted">By User ${event.userId}</small>
+          ${event.notes ? `<p class="text-gray-700 text-sm mt-2">${event.notes}</p>` : ''}
+          <span class="text-xs text-gray-500 mt-2 block">By User ${event.userId}</span>
         </div>
       </div>
     `).join('');
@@ -844,41 +856,68 @@ const IncidentManagement = (() => {
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
       toastContainer = document.createElement('div');
-      toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+      toastContainer.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2';
       document.body.appendChild(toastContainer);
     }
     
     // Create toast element
     const toastId = `toast-${Date.now()}`;
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    
+    // Determine toast type based on title
+    let bgColor = 'bg-gray-800';
+    if (title.toLowerCase() === 'success') {
+      bgColor = 'bg-green-500';
+    } else if (title.toLowerCase() === 'error') {
+      bgColor = 'bg-red-500';
+    } else if (title.toLowerCase() === 'warning') {
+      bgColor = 'bg-yellow-500';
+    } else if (title.toLowerCase() === 'info') {
+      bgColor = 'bg-blue-500';
+    }
+    
+    toast.className = `${bgColor} text-white p-4 rounded-lg shadow-lg flex items-start transform transition-all duration-300 opacity-0 translate-y-2 max-w-md`;
     toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
     toast.setAttribute('id', toastId);
     
     // Set toast content
     toast.innerHTML = `
-      <div class="toast-header">
-        <strong class="me-auto">${title}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      <div class="flex-1">
+        <h4 class="font-medium mb-1">${title}</h4>
+        <div class="text-sm">${message}</div>
       </div>
-      <div class="toast-body">
-        ${message}
-      </div>
+      <button type="button" class="ml-4 text-white hover:text-gray-200" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
     `;
     
     // Add toast to container
     toastContainer.appendChild(toast);
     
-    // Initialize Bootstrap toast
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
+    // Animate in
+    setTimeout(() => {
+      toast.classList.remove('opacity-0', 'translate-y-2');
+    }, 10);
     
-    // Remove toast after it's hidden
-    toast.addEventListener('hidden.bs.toast', () => {
-      toast.remove();
+    // Add close button event listener
+    toast.querySelector('button').addEventListener('click', () => {
+      removeToast(toast);
     });
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      removeToast(toast);
+    }, 5000);
+  };
+  
+  // Remove toast with animation
+  const removeToast = (toast) => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
   };
   
   // Clean up event listeners when destroying the component
