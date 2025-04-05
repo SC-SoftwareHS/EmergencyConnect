@@ -673,7 +673,7 @@ const IncidentManagement = (() => {
   // Render incident details
   const renderIncidentDetails = (incident) => {
     // Determine if user can update status (admin or operator)
-    const canUpdate = currentUser.isAdmin || currentUser.isOperator;
+    const canUpdate = currentUser.isAdmin() || currentUser.isOperator();
     
     // Render details
     $incidentDetails.innerHTML = `
