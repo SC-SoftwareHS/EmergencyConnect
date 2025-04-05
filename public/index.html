@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Alert System - Admin Dashboard</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="/css/styles.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2'%3E%3C/polygon%3E%3Cline x1='12' y1='8' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'%3E%3C/line%3E%3C/svg%3E">
+  
+  <!-- React, ReactDOM and Babel via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Socket.io client via CDN -->
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Root element for React app -->
+  <div id="root"></div>
+  
+  <!-- Socket service -->
+  <script src="/js/services/socketService.js"></script>
+  
+  <!-- API service -->
+  <script src="/js/services/api.js"></script>
+  
+  <!-- Components -->
+  <script type="text/babel" src="/js/components/Navbar.js"></script>
+  <script type="text/babel" src="/js/components/Login.js"></script>
+  <script type="text/babel" src="/js/components/Dashboard.js"></script>
+  <script type="text/babel" src="/js/components/AlertForm.js"></script>
+  <script type="text/babel" src="/js/components/AlertList.js"></script>
+  <script type="text/babel" src="/js/components/UserManagement.js"></script>
+  
+  <!-- Main App -->
+  <script type="text/babel" src="/js/App.js"></script>
+  
+  <script type="text/babel">
+    // Render the React app
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+  </script>
+</body>
+</html>

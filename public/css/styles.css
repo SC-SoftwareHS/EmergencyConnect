@@ -1,0 +1,132 @@
+/* Custom styles for the Emergency Alert System */
+
+/* Alert Severity Colors */
+.severity-low {
+  --severity-color: #3b82f6; /* blue */
+}
+
+.severity-medium {
+  --severity-color: #f59e0b; /* amber */
+}
+
+.severity-high {
+  --severity-color: #ef4444; /* red */
+}
+
+.severity-critical {
+  --severity-color: #7f1d1d; /* dark red */
+}
+
+/* Badge styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-pending {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.badge-sent {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-cancelled {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-failed {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Channel icons */
+.channel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  margin-right: 0.25rem;
+}
+
+.channel-email {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.channel-sms {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
+
+.channel-push {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+/* Alert card styles */
+.alert-card {
+  border-left: 4px solid var(--severity-color, #6b7280);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .alert-card-header {
+    flex-direction: column;
+  }
+  
+  .alert-card-actions {
+    margin-top: 0.5rem;
+    justify-content: flex-start;
+  }
+}
+
+/* Animation for new alerts */
+@keyframes highlight {
+  0% {
+    background-color: rgba(239, 68, 68, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.highlight-new {
+  animation: highlight 2s ease-out;
+}
+
+/* Spinner animation */
+.spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid #3b82f6;
+  width: 1.5rem;
+  height: 1.5rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
