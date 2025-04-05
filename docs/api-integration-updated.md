@@ -55,6 +55,7 @@ Currently, push notifications are only simulated. In the future, this could be i
 2. **Current Behavior**:
    - The system logs push notification details to the console and simulates successful delivery
    - No actual push notifications are sent
+   - Users need a push token registered to receive push notifications
 
 ## Testing Without API Keys
 
@@ -67,3 +68,20 @@ When running in simulation mode, the system:
 3. Continues normal application flow
 
 This enables end-to-end testing of the alert creation and notification targeting logic without requiring real API credentials.
+
+## Testing Results
+
+During development, we successfully verified:
+
+1. **SMS Delivery**: Real SMS messages were successfully delivered via Twilio to recipient mobile numbers.
+2. **Email Status**: Identified issues with SendGrid configuration related to sender verification.
+3. **Multi-Channel Alerts**: Successfully sent alerts through multiple channels simultaneously.
+4. **Fallback Mechanisms**: Confirmed graceful degradation to simulation mode when API errors occur.
+
+## Troubleshooting
+
+Common issues and their solutions:
+
+1. **Twilio "To and From Cannot Be the Same" Error**: Ensure your Twilio phone number is different from recipient numbers.
+2. **SendGrid 403 Forbidden**: Verify the sender email address in your SendGrid account and ensure your API key has the necessary permissions.
+3. **Missing Push Tokens**: Ensure user accounts have registered push tokens before attempting to send push notifications.
