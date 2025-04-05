@@ -15,7 +15,7 @@
 - [x] View Dashboard with Analytics
 - [x] Create New Alert
 - [x] Manage Incidents
-- [ ] Manage Users
+- [x] Manage Users
 - [ ] View Alert Acknowledgments
 - [ ] Cancel Pending Alerts
 - [ ] Real-time Updates
