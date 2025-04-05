@@ -12,24 +12,30 @@ const { isValidEmail, isValidPassword, validateUserData } = require('../utils/va
  */
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
     
-    // Check if email and password are provided
-    if (!email || !password) {
+    // Check if either email or username and password are provided
+    if ((!email && !username) || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required.'
+        message: 'Email/username and password are required.'
       });
     }
     
-    // Find user by email
-    const user = await userDB.findByEmail(email);
+    let user;
+    
+    // Find user by email or username
+    if (email) {
+      user = await userDB.findByEmail(email);
+    } else if (username) {
+      user = await userDB.findByUsername(username);
+    }
     
     // If user not found, return unauthorized
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid credentials.'
       });
     }
     
@@ -40,7 +46,7 @@ const login = async (req, res) => {
     if (!isValidPass) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid credentials.'
       });
     }
     

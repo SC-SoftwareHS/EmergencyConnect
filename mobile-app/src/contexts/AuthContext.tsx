@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authApi } from '../services/api';
+import { authApi, userApi } from '../services/api';
 import { AUTH_CONFIG } from '../config';
 import { AuthState, LoginCredentials, User } from '../types';
 import { disconnectSocket, initializeSocket } from '../services/socket';
+import { registerForPushNotifications, registerPushTokenWithServer } from '../services/notificationService';
 
 // Default auth state
 const initialAuthState: AuthState = {
@@ -91,6 +92,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Save to storage
         await AsyncStorage.setItem(AUTH_CONFIG.tokenStorageKey, token);
         await AsyncStorage.setItem(AUTH_CONFIG.userStorageKey, JSON.stringify(user));
+        
+        // Register push notifications token
+        try {
+          // Get push token from Expo
+          console.log('Registering for push notifications...');
+          const pushToken = await registerForPushNotifications();
+          
+          if (pushToken) {
+            console.log('Push token obtained:', pushToken);
+            
+            // Register the token with our server
+            const tokenRegistered = await registerPushTokenWithServer(user.id, pushToken);
+            console.log('Push token registration result:', tokenRegistered ? 'Success' : 'Failed');
+            
+            // If token was registered successfully, update the user object
+            if (tokenRegistered) {
+              // Update user in AsyncStorage with push token
+              const updatedUser = { ...user, pushToken };
+              await AsyncStorage.setItem(AUTH_CONFIG.userStorageKey, JSON.stringify(updatedUser));
+              
+              // Update state with the updated user
+              user.pushToken = pushToken;
+            }
+          } else {
+            console.log('Failed to obtain push token or user declined permissions');
+          }
+        } catch (error) {
+          console.error('Error registering push token:', error);
+          // Continue with login flow even if push registration fails
+        }
         
         // Update state
         setAuthState({

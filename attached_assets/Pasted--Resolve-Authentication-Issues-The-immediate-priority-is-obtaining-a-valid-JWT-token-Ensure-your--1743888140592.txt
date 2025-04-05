@@ -1,0 +1,136 @@
+. Resolve Authentication Issues
+The immediate priority is obtaining a valid JWT token:
+
+Ensure your login credentials (admin, admin123) match the seeded data in the PostgreSQL database.
+
+Verify your database seeding script (scripts/seed-db.js) hashes passwords correctly with bcryptjs.
+
+Check password hashing in your seed script:
+
+js
+Copy
+Edit
+const bcrypt = require('bcryptjs');
+
+const seedUsers = async () => {
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  await db.insert(users).values({
+    username: 'admin',
+    password: hashedPassword,
+    phone_number: '+18582151880',
+    role: 'admin'
+  });
+};
+
+seedUsers().then(() => process.exit());
+Re-run the seed script after verification:
+
+bash
+Copy
+Edit
+NODE_ENV=development DATABASE_URL="<your-db-url>" node scripts/seed-db.js
+2. Authenticate Properly
+Test login endpoint again:
+
+bash
+Copy
+Edit
+curl -X POST http://localhost:5000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{ "username": "admin", "password": "admin123" }'
+Store the returned JWT token for subsequent authenticated requests.
+
+3. Validate SMS Notifications via Twilio
+Once authenticated, test SMS notification by creating an alert:
+
+bash
+Copy
+Edit
+curl -X POST http://localhost:5000/api/alerts \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer <YOUR_VALID_JWT_TOKEN>" \
+-d '{
+  "title": "Test SMS Alert",
+  "message": "This is a test SMS alert from our Emergency Alert System",
+  "severity": "medium",
+  "channels": ["sms"],
+  "targeting": { "roles": ["admin"] },
+  "status": "sent"
+}'
+Check Twilio logs (Twilio Dashboard) for SMS delivery status.
+
+4. Review your middleware and JWT
+Ensure your middleware properly verifies JWT tokens:
+
+middleware/auth.js:
+
+js
+Copy
+Edit
+const jwt = require('jsonwebtoken');
+const { findUserById } = require('../services/databaseService');
+
+module.exports = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization').replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await findUserById(decoded.userId);
+
+    if (!user) throw new Error('User not found.');
+
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401).send({ error: 'Authentication failed.' });
+  }
+};
+Ensure JWT_SECRET environment variable is set in .env and matches across server and middleware.
+
+5. Check Socket.io Authentication
+To secure real-time alerts with Socket.io, implement JWT authentication middleware:
+
+Example (server.js or separate middleware file):
+
+js
+Copy
+Edit
+const jwt = require('jsonwebtoken');
+const { findUserById } = require('./services/databaseService');
+
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await findUserById(decoded.userId);
+    if (!user) return next(new Error('Authentication error'));
+
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error('Authentication error'));
+  }
+});
+Ensure the client-side Socket.io emits authentication with JWT token.
+
+6. Final Test
+Restart server with full configuration (dotenv loaded):
+
+bash
+Copy
+Edit
+NODE_ENV=development DATABASE_URL="<your-db-url>" node server.js
+Run your alert creation endpoint again. Confirm:
+
+Successful database write
+
+SMS delivered via Twilio
+
+Socket.io real-time notification (if client-side is ready)
+
+🎯 Recommended Best Practices Moving Forward:
+Maintain clear, consistent naming conventions (e.g., hasUserAcknowledged).
+
+Implement robust error handling and logging for easier debugging.
+
+Regularly test JWT tokens and middleware separately to isolate issues.
+

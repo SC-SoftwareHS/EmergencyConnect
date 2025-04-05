@@ -365,45 +365,86 @@ const updateUserSubscription = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const registerPushToken = (req, res) => {
-  const { id } = req.params;
-  const { pushToken } = req.body;
-  
-  // Validate push token
-  if (!pushToken || typeof pushToken !== 'string') {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid push token. Expected a string.'
-    });
-  }
-  
-  // Find user
-  const user = userDB.findById(parseInt(id));
-  
-  // If user not found, return not found
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: `User with ID ${id} not found.`
-    });
-  }
-  
-  // Register push token
-  const tokenChanged = user.registerPushToken(pushToken);
-  
-  // If token was registered, update user in database
-  if (tokenChanged) {
-    userDB.update(parseInt(id), { pushToken });
-  }
-  
-  // Return success
-  res.json({
-    success: true,
-    message: tokenChanged ? 'Push token registered successfully.' : 'Push token already registered.',
-    data: {
-      user: user.getSafeUser()
+const registerPushToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pushToken } = req.body;
+    const userId = parseInt(id);
+    
+    // Validate push token
+    if (!pushToken || typeof pushToken !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid push token. Expected a string.'
+      });
     }
-  });
+    
+    // Validate token format (basic)
+    const isExpoToken = pushToken.startsWith('ExponentPushToken[');
+    const validLength = pushToken.length > 10 && pushToken.length < 150; // Reasonable token length
+    
+    if (!validLength) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid push token format. Token length out of acceptable range.'
+      });
+    }
+    
+    // Find user
+    const user = await userDB.findById(userId);
+    
+    // If user not found, return not found
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: `User with ID ${id} not found.`
+      });
+    }
+    
+    // Check for token change
+    const tokenChanged = user.pushToken !== pushToken;
+    
+    if (!tokenChanged) {
+      // Token is already up to date
+      return res.json({
+        success: true,
+        message: 'Push token is already registered and up to date.',
+        data: {
+          user: user.getSafeUser()
+        }
+      });
+    }
+    
+    // Log the token registration
+    console.log(`[PUSH] Registering new push token for user ${id}: ${pushToken.substring(0, 15)}...`);
+    console.log(`[PUSH] Token type: ${isExpoToken ? 'Expo' : 'Unknown'}`);
+    
+    // Update user push token in database
+    const updatedUser = await userDB.update(userId, { pushToken });
+    
+    if (!updatedUser) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update user push token.'
+      });
+    }
+    
+    // Return success with safe user data
+    res.json({
+      success: true,
+      message: 'Push token registered successfully.',
+      data: {
+        user: updatedUser.getSafeUser(),
+        tokenType: isExpoToken ? 'expo' : 'unknown'
+      }
+    });
+  } catch (error) {
+    console.error('[PUSH] Error registering push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while registering push token: ' + error.message
+    });
+  }
 };
 
 module.exports = {
