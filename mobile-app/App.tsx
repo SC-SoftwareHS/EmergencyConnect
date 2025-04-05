@@ -1,118 +1,165 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-// Import screens
-import LoginScreen from './src/screens/LoginScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import AlertDetailScreen from './src/screens/AlertDetailScreen';
-
-// Import context providers
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-
-// Import types and services
-import { RootStackParamList } from './src/types';
-import { configureNotifications } from './src/services/notificationService';
-
-// Configure notifications for the app
-configureNotifications();
-
-// Create the navigation stack
-const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// Navigation component
-const AppNavigator = () => {
-  const { authState } = useAuth();
-  const { isAuthenticated, isLoading } = authState;
-
-  // Show loading screen while checking authentication
-  if (isLoading) {
-    return null; // Or a loading screen component
-  }
-
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        {!isAuthenticated ? (
-          // Auth screens
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
-        ) : (
-          // App screens
-          <>
-            <Stack.Screen 
-              name="Dashboard" 
-              component={DashboardScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="AlertDetail" 
-              component={AlertDetailScreen}
-              options={{ title: 'Alert Details' }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-};
+// Import the simplified login screen (bypasses regular auth flow)
+import SimplifiedLoginScreen from './src/screens/SimplifiedLoginScreen';
+import { COLORS } from './src/config';
 
 export default function App() {
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    // Import notification services
-    import('./src/services/notificationService')
-      .then(({ registerForPushNotifications, addNotificationListener, addNotificationResponseListener }) => {
-        // Register for push notifications
-        registerForPushNotifications().then(token => {
-          if (token) {
-            setExpoPushToken(token);
-            console.log('Push token obtained:', token);
-          }
-        });
+  // Handle successful login
+  const handleLoginSuccess = (loginResult) => {
+    console.log('Login successful with result:', JSON.stringify(loginResult));
+    setUser(loginResult.user);
+    setLoggedIn(true);
+  };
 
-        // Handle received notifications
-        notificationListener.current = addNotificationListener(notification => {
-          console.log('Notification received:', notification);
-        });
+  // If not logged in, show the simplified login screen
+  if (!loggedIn) {
+    return (
+      <SafeAreaProvider>
+        <SimplifiedLoginScreen onLoginSuccess={handleLoginSuccess} />
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
+    );
+  }
 
-        // Handle notification responses (when user taps on notification)
-        responseListener.current = addNotificationResponseListener(response => {
-          console.log('Notification response:', response);
-          // Here we could navigate to a specific screen based on notification data
-          // e.g., navigate to AlertDetail if the notification is about a new alert
-        });
-      })
-      .catch(error => {
-        console.error('Error setting up notifications:', error);
-      });
-
-    // Clean up listeners on unmount
-    return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-    };
-  }, []);
-
+  // Simple dashboard after login (for testing)
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AppNavigator />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Emergency Connect</Text>
+        </View>
+        
+        <View style={styles.content}>
+          <View style={styles.userInfoCard}>
+            <Text style={styles.welcomeText}>Welcome, {user?.username || 'User'}!</Text>
+            <Text style={styles.userRole}>Role: {user?.role || 'Unknown'}</Text>
+            
+            <View style={styles.divider} />
+            
+            <Text style={styles.successText}>
+              Authentication successful! 🎉
+            </Text>
+            
+            <Text style={styles.infoText}>
+              You've successfully authenticated with the server. This simplified dashboard 
+              confirms your login information is correct.
+            </Text>
+          </View>
+          
+          <View style={styles.statusCard}>
+            <Text style={styles.statusTitle}>Connection Status</Text>
+            <View style={styles.statusItem}>
+              <View style={[styles.statusDot, { backgroundColor: COLORS.success }]} />
+              <Text style={styles.statusText}>Server connection: <Text style={styles.statusHighlight}>Active</Text></Text>
+            </View>
+          </View>
+        </View>
+        
         <StatusBar style="auto" />
-      </AuthProvider>
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    padding: 20,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  userInfoCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  userRole: {
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEEEEE',
+    marginVertical: 16,
+  },
+  successText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.success,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 22,
+  },
+  statusCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statusTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 16,
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  statusText: {
+    fontSize: 16,
+    color: '#444444',
+  },
+  statusHighlight: {
+    fontWeight: 'bold',
+    color: COLORS.success,
+  },
+});

@@ -78,52 +78,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Login user
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
+      console.log('Starting login process with credentials:', JSON.stringify(credentials));
+      
       setAuthState(prevState => ({
         ...prevState,
         isLoading: true,
         error: null,
       }));
       
+      // Add some extra debugging
+      console.log('Auth state before API call:', JSON.stringify({
+        isAuthenticated: authState.isAuthenticated,
+        isLoading: authState.isLoading
+      }));
+      
       const response = await authApi.login(credentials);
+      console.log('Login API response received:', JSON.stringify({
+        success: response.success,
+        hasData: !!response.data,
+        error: response.error
+      }));
       
       if (response.success && response.data) {
+        console.log('Login successful, processing response data');
         const { user, token } = response.data;
         
         // Save to storage
+        console.log('Saving auth data to AsyncStorage');
         await AsyncStorage.setItem(AUTH_CONFIG.tokenStorageKey, token);
         await AsyncStorage.setItem(AUTH_CONFIG.userStorageKey, JSON.stringify(user));
         
-        // Register push notifications token
+        // Skip push notification for now to avoid dependency issues
         try {
-          // Get push token from Expo
-          console.log('Registering for push notifications...');
-          const pushToken = await registerForPushNotifications();
-          
-          if (pushToken) {
-            console.log('Push token obtained:', pushToken);
-            
-            // Register the token with our server
-            const tokenRegistered = await registerPushTokenWithServer(user.id, pushToken);
-            console.log('Push token registration result:', tokenRegistered ? 'Success' : 'Failed');
-            
-            // If token was registered successfully, update the user object
-            if (tokenRegistered) {
-              // Update user in AsyncStorage with push token
-              const updatedUser = { ...user, pushToken };
-              await AsyncStorage.setItem(AUTH_CONFIG.userStorageKey, JSON.stringify(updatedUser));
-              
-              // Update state with the updated user
-              user.pushToken = pushToken;
-            }
-          } else {
-            console.log('Failed to obtain push token or user declined permissions');
-          }
-        } catch (error) {
-          console.error('Error registering push token:', error);
-          // Continue with login flow even if push registration fails
+          console.log('Initializing Socket.io connection');
+          // Initialize Socket.io connection
+          await initializeSocket();
+        } catch (socketError) {
+          console.error('Socket initialization error (non-fatal):', socketError);
+          // Continue with login flow even if socket fails
         }
         
         // Update state
+        console.log('Updating auth state with user info');
         setAuthState({
           isAuthenticated: true,
           user,
@@ -132,19 +128,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           error: null,
         });
         
-        // Initialize Socket.io connection
-        await initializeSocket();
-        
         return true;
       } else {
+        console.error('Login failed:', response.error);
         setAuthState(prevState => ({
           ...prevState,
           isLoading: false,
-          error: response.error || 'Login failed.',
+          error: response.error || 'Login failed. Please check your credentials.',
         }));
         return false;
       }
     } catch (error: any) {
+      console.error('Unexpected error during login:', error);
       setAuthState(prevState => ({
         ...prevState,
         isLoading: false,

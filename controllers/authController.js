@@ -11,11 +11,14 @@ const { isValidEmail, isValidPassword, validateUserData } = require('../utils/va
  * @param {Object} res - Express response object
  */
 const login = async (req, res) => {
+  console.log('Login request received:', JSON.stringify(req.body));
+  
   try {
     const { email, username, password } = req.body;
     
     // Check if either email or username and password are provided
     if ((!email && !username) || !password) {
+      console.log('Login validation failed: Missing email/username or password');
       return res.status(400).json({
         success: false,
         message: 'Email/username and password are required.'
@@ -26,29 +29,37 @@ const login = async (req, res) => {
     
     // Find user by email or username
     if (email) {
+      console.log('Attempting to find user by email:', email);
       user = await userDB.findByEmail(email);
     } else if (username) {
+      console.log('Attempting to find user by username:', username);
       user = await userDB.findByUsername(username);
     }
     
     // If user not found, return unauthorized
     if (!user) {
+      console.log('Login failed: User not found');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials.'
       });
     }
+    
+    console.log('User found, validating password');
     
     // Validate password
     const isValidPass = await userDB.validatePassword(user, password);
     
     // If password is incorrect, return unauthorized
     if (!isValidPass) {
+      console.log('Login failed: Invalid password');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials.'
       });
     }
+    
+    console.log('Password valid, generating token');
     
     // Generate JWT token
     const token = generateToken(user);
@@ -56,14 +67,20 @@ const login = async (req, res) => {
     // Return success with token and user data (without password)
     const { password: _, ...safeUser } = user;
     
-    res.json({
+    console.log('Login successful for user:', safeUser.username);
+    
+    // Ensure we're sending the response in the format the mobile app expects
+    const responseObj = {
       success: true,
       message: 'Login successful.',
       data: {
         token,
         user: safeUser
       }
-    });
+    };
+    
+    console.log('Sending login response:', JSON.stringify(responseObj));
+    res.json(responseObj);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({

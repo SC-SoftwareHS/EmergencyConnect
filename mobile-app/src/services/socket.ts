@@ -26,6 +26,7 @@ const listeners = {
 export const initializeSocket = async (): Promise<Socket | null> => {
   try {
     // Get auth token using our shared function
+    console.log('Socket initialization: Getting auth token');
     const token = await getAuthToken();
     
     if (!token) {
@@ -33,28 +34,55 @@ export const initializeSocket = async (): Promise<Socket | null> => {
       return null;
     }
     
-    // Initialize socket connection
-    socket = io(SOCKET_CONFIG.url, {
-      ...SOCKET_CONFIG.options,
+    console.log('Socket initialization: Configuring connection to', SOCKET_CONFIG.url);
+    console.log('Socket configuration:', JSON.stringify({
       path: SOCKET_CONFIG.path,
-      auth: {
-        token,
-      },
-    });
+      options: SOCKET_CONFIG.options
+    }));
+    
+    // First disconnect any existing socket
+    if (socket) {
+      console.log('Closing existing socket connection before creating a new one');
+      socket.disconnect();
+      socket = null;
+    }
+    
+    // Initialize socket connection with better error handling
+    try {
+      socket = io(SOCKET_CONFIG.url, {
+        ...SOCKET_CONFIG.options,
+        path: SOCKET_CONFIG.path,
+        auth: {
+          token,
+        },
+        // Add timeout to prevent hanging
+        timeout: 10000,
+      });
+    } catch (socketInitError) {
+      console.error('Error creating socket.io client:', socketInitError);
+      return null;
+    }
+    
+    console.log('Socket client created, setting up event listeners');
     
     // Set up event listeners
     socket.on('connect', () => {
-      console.log('Connected to Socket.io server');
+      console.log('🟢 Connected to Socket.io server');
       listeners.connect.forEach(callback => callback());
     });
     
+    socket.on('connect_error', (error) => {
+      console.error('⛔ Socket connection error:', error.message);
+      listeners.error.forEach(callback => callback(error));
+    });
+    
     socket.on('disconnect', (reason) => {
-      console.log('Disconnected from Socket.io server:', reason);
+      console.log('🔴 Disconnected from Socket.io server:', reason);
       listeners.disconnect.forEach(callback => callback());
     });
     
     socket.on('error', (error) => {
-      console.error('Socket.io error:', error);
+      console.error('⚠️ Socket.io error:', error);
       listeners.error.forEach(callback => callback(error));
     });
     
@@ -73,12 +101,14 @@ export const initializeSocket = async (): Promise<Socket | null> => {
       listeners.alertAcknowledged.forEach(callback => callback(alert));
     });
     
-    // Connect to the server
+    // Connect to the server with timeout
+    console.log('Attempting to connect to Socket.io server...');
     socket.connect();
     
+    // Return the socket instance
     return socket;
   } catch (error) {
-    console.error('Failed to initialize socket:', error);
+    console.error('❌ Failed to initialize socket:', error);
     return null;
   }
 };

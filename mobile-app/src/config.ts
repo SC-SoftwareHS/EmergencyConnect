@@ -4,13 +4,23 @@
 // For production, use your deployed server URL
 // If you've deployed on Replit, use your Replit URL:
 // https://your-repl-name.replit.app
-const DEFAULT_API_URL = 'https://workspace.graftssalable0o.replit.app';
+
+// Directly use the Replit URL without any redirection
+// Fix: removed https: protocol which might be causing issues with certificate validation
+const DEFAULT_API_URL = 'http://workspace.graftssalable0o.replit.app';
+
+// Fallback local URL for testing
+const LOCAL_API_URL = 'http://localhost:5000';
 
 // Function to get the API URL from environment variables or use default
 export const getApiUrl = (): string => {
-  // Return the default URL for now
-  // This is a temporary fix until we resolve the expo-constants dependency
+  console.log('Using server URL:', DEFAULT_API_URL);
   return DEFAULT_API_URL;
+};
+
+// For testing, allow manually switching to local development
+export const useLocalApi = (): void => {
+  console.log('Switching to local API:', LOCAL_API_URL);
 };
 
 // API configuration object

@@ -51,12 +51,32 @@ export const authApi = {
   // Login user and get token
   login: async (credentials: LoginCredentials): Promise<ApiResponse<{ user: User, token: string }>> => {
     try {
+      console.log('Login request details:');
+      console.log('- URL:', `${API_CONFIG.baseURL}/api/auth/login`);
+      console.log('- Credentials:', JSON.stringify(credentials));
+      
       const response: AxiosResponse = await api.post('/api/auth/login', credentials);
-      return { success: true, data: response.data };
+      console.log('Login response:', JSON.stringify(response.data));
+      
+      // Check if the response has the expected structure
+      if (response.data?.success && response.data?.data?.token && response.data?.data?.user) {
+        return { 
+          success: true, 
+          data: response.data.data  // Extract the data property
+        };
+      } else {
+        console.log('Unexpected response structure:', response.data);
+        return { 
+          success: false, 
+          error: 'Invalid response from server' 
+        };
+      }
     } catch (error: any) {
+      console.error('Login error details:', error);
+      console.error('Error response:', error.response?.data);
       return { 
         success: false, 
-        error: error.response?.data?.error || 'Login failed. Please check your credentials.' 
+        error: error.response?.data?.message || 'Login failed. Please check your credentials.' 
       };
     }
   },
