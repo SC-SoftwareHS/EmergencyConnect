@@ -33,7 +33,7 @@ function initializeDatabase() {
     'admin123', // In a real app, this would be hashed
     'admin',
     { email: true, sms: true, push: true },
-    '+15551234567'
+    '+18582151880' // Valid phone number for testing
   );
   
   // Create operator user
