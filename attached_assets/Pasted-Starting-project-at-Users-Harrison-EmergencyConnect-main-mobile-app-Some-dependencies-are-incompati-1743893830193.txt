@@ -1,0 +1,49 @@
+Starting project at /Users/Harrison/EmergencyConnect-main/mobile-app
+Some dependencies are incompatible with the installed expo version:
+  @react-native-async-storage/async-storage@1.24.0 - expected version: 1.17.11
+  react-native@0.71.8 - expected version: 0.71.14
+Your project may not work correctly until you install the correct versions of the packages.
+Install individual packages by running npx expo install @react-native-async-storage/async-storage@1.17.11 react-native@0.71.14
+Starting Metro Bundler
+Starting Webpack on port 19006 in development mode.
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █▀▄█▀ ▀▀ ▄█ ▄▄▄▄▄ █
+█ █   █ █▄   ▄██▀ █ █   █ █
+█ █▄▄▄█ █ ▀█▀█▄█ ██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█ ▀▄█ █▄█▄█▄▄▄▄▄▄▄█
+█ ▄▀ ██▄ ▀█ ▀█▄▀▄▄▀  ▄▀▄▄▀█
+██▄ █▀▄▄  ▄▄██▀ █ ▄▀ ▀▀█▄▄█
+█▄ ▀ ██▄█ ▀▀▀ ▄ █▀█ ▄█ ██▀█
+█▄▀ █▀▄▄▀████ ▀▀█ ▄▄ ▀▀██▄█
+█▄▄██▄▄▄▄▀█▄▄▄█▄  ▄▄▄ █ ▄ █
+█ ▄▄▄▄▄ █▄▄█▀▄█   █▄█  ▀▄▄█
+█ █   █ █▀▄▀▄█ ▀▀▄ ▄▄ █▀▄██
+█ █▄▄▄█ █▀█▀█▄  █  █▄  ▄█▄█
+█▄▄▄▄▄▄▄█▄████▄▄█▄███▄▄█▄▄█
+
+› Metro waiting on exp://192.168.7.166:19000
+› Scan the QR code above with Expo Go (Android) or the Camera app (iOS)
+
+› Web is waiting on http://localhost:19006
+
+› Press a │ open Android
+› Press i │ open iOS simulator
+› Press w │ open web
+
+› Press j │ open debugger
+› Press r │ reload app
+› Press m │ toggle menu
+
+› Press ? │ show all commands
+
+Logs for your project will appear below. Press Ctrl+C to exit.
+(node:4567) [DEP_WEBPACK_DEV_SERVER_CONSTRUCTOR] DeprecationWarning: Using 'compiler' as the first argument is deprecated. Please use 'options' as the first argument and 'compiler' as the second argument.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:4567) [DEP_WEBPACK_DEV_SERVER_LISTEN] DeprecationWarning: 'listen' is deprecated. Please use the async 'start' or 'startCallback' method.
+ERROR in ./src/services/notificationService.ts:2
+Module not found: Can't resolve 'expo-device'
+  1 | import Constants from 'expo-constants';
+> 2 | import * as Device from 'expo-device';
+  3 | import * as Notifications from 'expo-notifications';
+  4 | import { Platform } from 'react-native';
+  5 | import { getApiUrl } from '../config';
