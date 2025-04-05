@@ -7,6 +7,7 @@ const Dashboard = ({ user }) => {
   const [alertStats, setAlertStats] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const incidentContainerRef = React.useRef(null);
   
   // Fetch alert statistics for the dashboard
   React.useEffect(() => {
@@ -30,6 +31,19 @@ const Dashboard = ({ user }) => {
       socketService.offNewAlert();
     };
   }, [user.role]);
+  
+  // Initialize IncidentManagement when tab changes to incidents
+  React.useEffect(() => {
+    if (activeTab === 'incidents' && incidentContainerRef.current) {
+      // Initialize the IncidentManagement component
+      IncidentManagement.init('#incident-management-container', user);
+      
+      // Clean up when component unmounts or tab changes
+      return () => {
+        IncidentManagement.destroy();
+      };
+    }
+  }, [activeTab, user]);
   
   // Fetch alert statistics
   const fetchAlertStats = () => {
@@ -143,6 +157,15 @@ const Dashboard = ({ user }) => {
         return <AlertForm user={user} onAlertCreated={() => setActiveTab('alerts')} />;
       case 'users':
         return <UserManagement user={user} />;
+      case 'incidents':
+        return (
+          <div id="incident-management-container" ref={incidentContainerRef}>
+            <div className="text-center py-8">
+              <div className="spinner mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading incident management...</p>
+            </div>
+          </div>
+        );
       case 'alerts':
       default:
         return <AlertList user={user} />;
@@ -182,6 +205,20 @@ const Dashboard = ({ user }) => {
               <i className="fas fa-bell mr-2"></i>
               Alerts
             </button>
+            
+            {(user.isAdmin || user.role === 'operator') && (
+              <button
+                onClick={() => setActiveTab('incidents')}
+                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                  activeTab === 'incidents'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <i className="fas fa-exclamation-circle mr-2"></i>
+                Incidents
+              </button>
+            )}
             
             {user.role === 'admin' && (
               <button

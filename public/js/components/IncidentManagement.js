@@ -36,18 +36,18 @@ const IncidentManagement = (() => {
   const render = () => {
     $container.innerHTML = `
       <div class="incident-management">
-        <h2>Incident Management</h2>
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Incident Management</h2>
         
-        <div class="row">
-          <div class="col-md-4">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Incidents</h3>
-                <button id="create-incident-btn" class="btn btn-sm btn-primary">Report New</button>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow">
+              <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-gray-900">Incidents</h3>
+                <button id="create-incident-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm">Report New</button>
               </div>
-              <div class="card-body">
-                <div class="form-group mb-3">
-                  <select id="incident-filter" class="form-control">
+              <div class="p-4">
+                <div class="mb-4">
+                  <select id="incident-filter" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                     <option value="all">All Incidents</option>
                     <option value="reported">Reported</option>
                     <option value="investigating">Investigating</option>
@@ -55,11 +55,10 @@ const IncidentManagement = (() => {
                     <option value="closed">Closed</option>
                   </select>
                 </div>
-                <div id="incident-list" class="list-group incident-list">
-                  <div class="text-center p-3">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
+                <div id="incident-list" class="space-y-2">
+                  <div class="text-center p-4">
+                    <div class="spinner mx-auto"></div>
+                    <p class="mt-2 text-gray-600">Loading incidents...</p>
                   </div>
                 </div>
               </div>
