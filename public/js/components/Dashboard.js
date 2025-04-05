@@ -376,6 +376,145 @@ const Dashboard = ({ user }) => {
             </div>
           </div>
         );
+      case 'analytics':
+        return (
+          <div className="bg-white rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4">Analytics Dashboard</h2>
+            <p className="text-gray-600 mb-4">View detailed analytics and reporting for all alerts and incidents.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Alert Response Times</h3>
+                <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
+                  <div className="text-center">
+                    <i className="fas fa-chart-line text-3xl text-gray-400 mb-2"></i>
+                    <p className="text-gray-500">Response time analytics visualization</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Channel Effectiveness</h3>
+                <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
+                  <div className="text-center">
+                    <i className="fas fa-chart-pie text-3xl text-gray-400 mb-2"></i>
+                    <p className="text-gray-500">Channel effectiveness visualization</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="text-lg font-medium mb-3">Historical Alert Data</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Alerts</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Response Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Success Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap">This Week</td>
+                      <td className="px-6 py-4 whitespace-nowrap">24</td>
+                      <td className="px-6 py-4 whitespace-nowrap">2m 15s</td>
+                      <td className="px-6 py-4 whitespace-nowrap">98.2%</td>
+                    </tr>
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap">Last Week</td>
+                      <td className="px-6 py-4 whitespace-nowrap">18</td>
+                      <td className="px-6 py-4 whitespace-nowrap">2m 42s</td>
+                      <td className="px-6 py-4 whitespace-nowrap">96.5%</td>
+                    </tr>
+                    <tr>
+                      <td className="px-6 py-4 whitespace-nowrap">This Month</td>
+                      <td className="px-6 py-4 whitespace-nowrap">76</td>
+                      <td className="px-6 py-4 whitespace-nowrap">2m 38s</td>
+                      <td className="px-6 py-4 whitespace-nowrap">97.4%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="bg-white rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4">System Settings</h2>
+            <p className="text-gray-600 mb-4">Configure application settings and preferences.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="col-span-1">
+                <div className="bg-white border rounded-lg p-4">
+                  <h3 className="text-lg font-medium mb-3">Navigation</h3>
+                  <ul className="space-y-2">
+                    <li className="text-red-600 font-medium">General Settings</li>
+                    <li className="text-gray-600 hover:text-gray-800 cursor-pointer">Notification Settings</li>
+                    <li className="text-gray-600 hover:text-gray-800 cursor-pointer">Security Settings</li>
+                    <li className="text-gray-600 hover:text-gray-800 cursor-pointer">API Configuration</li>
+                    <li className="text-gray-600 hover:text-gray-800 cursor-pointer">Integrations</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="col-span-2">
+                <div className="bg-white border rounded-lg p-4">
+                  <h3 className="text-lg font-medium mb-3">General Settings</h3>
+                  
+                  <form className="space-y-4">
+                    <div>
+                      <label htmlFor="system-name" className="block text-sm font-medium text-gray-700">System Name</label>
+                      <input 
+                        type="text" 
+                        id="system-name" 
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" 
+                        placeholder="Emergency Alert System"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="timezone" className="block text-sm font-medium text-gray-700">Default Timezone</label>
+                      <select 
+                        id="timezone" 
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
+                      >
+                        <option>UTC</option>
+                        <option>America/New_York</option>
+                        <option>America/Chicago</option>
+                        <option>America/Denver</option>
+                        <option>America/Los_Angeles</option>
+                      </select>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        id="maintenance-mode" 
+                        className="h-4 w-4 text-red-600 border-gray-300 rounded"
+                      />
+                      <label htmlFor="maintenance-mode" className="ml-2 block text-sm text-gray-700">
+                        Enable Maintenance Mode
+                      </label>
+                    </div>
+                    
+                    <div className="pt-4">
+                      <button 
+                        type="button" 
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700"
+                      >
+                        Save Settings
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       case 'alerts':
       default:
         return <AlertList user={user} />;
@@ -414,6 +553,21 @@ const Dashboard = ({ user }) => {
           </button>
         )}
         
+        {/* Only admin can see analytics */}
+        {user.role === 'admin' && (
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+              activeTab === 'analytics'
+                ? 'border-red-500 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <i className="fas fa-chart-bar mr-2"></i>
+            Analytics
+          </button>
+        )}
+        
         {/* Only admin can see users */}
         {user.role === 'admin' && (
           <button
@@ -428,6 +582,19 @@ const Dashboard = ({ user }) => {
             Users
           </button>
         )}
+        
+        {/* All users can see settings */}
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+            activeTab === 'settings'
+              ? 'border-red-500 text-red-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          <i className="fas fa-cog mr-2"></i>
+          Settings
+        </button>
       </nav>
     );
   };
