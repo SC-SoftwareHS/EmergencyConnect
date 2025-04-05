@@ -1,7 +1,7 @@
 /**
  * Alert controller for the emergency alert system
  */
-const { alertDB, userDB, subscriptionDB } = require('../utils/database');
+const { alertDB, userDB, subscriptionDB } = require('../services/databaseService');
 const { validateAlertData } = require('../utils/validators');
 const notificationService = require('../services/notificationService');
 
@@ -29,8 +29,14 @@ const createAlert = async (req, res) => {
   }
   
   try {
+    // Add sentAt if sending immediately
+    if (alertData.status === 'sent' || !alertData.status) {
+      alertData.sentAt = new Date();
+      alertData.status = 'sent';
+    }
+    
     // Create alert
-    const newAlert = alertDB.create(alertData);
+    const newAlert = await alertDB.create(alertData);
     
     // Identify recipients based on targeting
     const recipients = await identifyRecipients(alertData.targeting);
@@ -49,8 +55,10 @@ const createAlert = async (req, res) => {
       pending: 0
     };
     
-    newAlert.updateDeliveryStats(stats);
-    newAlert.updateStatus('sent');
+    // Update alert with delivery stats
+    await alertDB.update(newAlert.id, { 
+      deliveryStats: stats
+    });
     
     // Notify connected clients via Socket.io
     req.io.emit('newAlert', {
@@ -89,41 +97,51 @@ const createAlert = async (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const getAllAlerts = (req, res) => {
-  // Get query parameters
-  const { status, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-  
-  // Get all alerts
-  let alerts = alertDB.getAll();
-  
-  // Filter by status if provided
-  if (status) {
-    alerts = alerts.filter(alert => alert.status === status);
-  }
-  
-  // Sort alerts
-  alerts.sort((a, b) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
+const getAllAlerts = async (req, res) => {
+  try {
+    // Get query parameters
+    const { status, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
-    if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1;
+    // Get all alerts - filtering will be done in the database when possible
+    let alerts;
+    
+    if (status) {
+      alerts = await alertDB.getAllByStatus(status);
     } else {
-      return aValue < bValue ? 1 : -1;
+      alerts = await alertDB.getAll();
     }
-  });
-  
-  // Limit results
-  alerts = alerts.slice(0, parseInt(limit));
-  
-  // Return success with alerts
-  res.json({
-    success: true,
-    data: {
-      alerts,
-      total: alerts.length
-    }
-  });
+    
+    // Sort alerts - database handles this, but we still process here for flexibility
+    alerts.sort((a, b) => {
+      const aValue = a[sortBy];
+      const bValue = b[sortBy];
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    // Limit results
+    alerts = alerts.slice(0, parseInt(limit));
+    
+    // Return success with alerts
+    res.json({
+      success: true,
+      data: {
+        alerts,
+        total: alerts.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting alerts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve alerts.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 /**
@@ -131,27 +149,40 @@ const getAllAlerts = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const getAlertById = (req, res) => {
-  const { id } = req.params;
-  
-  // Find alert
-  const alert = alertDB.findById(parseInt(id));
-  
-  // If alert not found, return not found
-  if (!alert) {
-    return res.status(404).json({
+const getAlertById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find alert
+    const alert = await alertDB.findById(parseInt(id));
+    
+    // If alert not found, return not found
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: `Alert with ID ${id} not found.`
+      });
+    }
+    
+    // Get acknowledgments for this alert
+    const acknowledgments = await alertDB.getAcknowledgments(parseInt(id));
+    
+    // Return success with alert and acknowledgments
+    res.json({
+      success: true,
+      data: {
+        alert,
+        acknowledgments
+      }
+    });
+  } catch (error) {
+    console.error('Error retrieving alert:', error);
+    res.status(500).json({
       success: false,
-      message: `Alert with ID ${id} not found.`
+      message: 'Failed to retrieve alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-  
-  // Return success with alert
-  res.json({
-    success: true,
-    data: {
-      alert
-    }
-  });
 };
 
 /**
@@ -159,40 +190,49 @@ const getAlertById = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const updateAlert = (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  
-  // Find alert
-  const alert = alertDB.findById(parseInt(id));
-  
-  // If alert not found, return not found
-  if (!alert) {
-    return res.status(404).json({
-      success: false,
-      message: `Alert with ID ${id} not found.`
-    });
-  }
-  
-  // If alert is already sent, prevent certain updates
-  if (alert.status === 'sent' && (updates.title || updates.message || updates.severity || updates.channels)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Cannot modify core details of an alert that has already been sent.'
-    });
-  }
-  
-  // Update alert
-  const updatedAlert = alertDB.update(parseInt(id), updates);
-  
-  // Return success with updated alert
-  res.json({
-    success: true,
-    message: 'Alert updated successfully.',
-    data: {
-      alert: updatedAlert
+const updateAlert = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Find alert
+    const alert = await alertDB.findById(parseInt(id));
+    
+    // If alert not found, return not found
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: `Alert with ID ${id} not found.`
+      });
     }
-  });
+    
+    // If alert is already sent, prevent certain updates
+    if (alert.status === 'sent' && (updates.title || updates.message || updates.severity || updates.channels)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify core details of an alert that has already been sent.'
+      });
+    }
+    
+    // Update alert
+    const updatedAlert = await alertDB.update(parseInt(id), updates);
+    
+    // Return success with updated alert
+    res.json({
+      success: true,
+      message: 'Alert updated successfully.',
+      data: {
+        alert: updatedAlert
+      }
+    });
+  } catch (error) {
+    console.error('Error updating alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 /**
@@ -200,28 +240,44 @@ const updateAlert = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const deleteAlert = (req, res) => {
-  const { id } = req.params;
-  
-  // Find alert
-  const alert = alertDB.findById(parseInt(id));
-  
-  // If alert not found, return not found
-  if (!alert) {
-    return res.status(404).json({
+const deleteAlert = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find alert
+    const alert = await alertDB.findById(parseInt(id));
+    
+    // If alert not found, return not found
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: `Alert with ID ${id} not found.`
+      });
+    }
+    
+    // Delete alert
+    const deleted = await alertDB.delete(parseInt(id));
+    
+    if (!deleted) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete alert.'
+      });
+    }
+    
+    // Return success
+    res.json({
+      success: true,
+      message: 'Alert deleted successfully.'
+    });
+  } catch (error) {
+    console.error('Error deleting alert:', error);
+    res.status(500).json({
       success: false,
-      message: `Alert with ID ${id} not found.`
+      message: 'Failed to delete alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-  
-  // Delete alert
-  alertDB.delete(parseInt(id));
-  
-  // Return success
-  res.json({
-    success: true,
-    message: 'Alert deleted successfully.'
-  });
 };
 
 /**
@@ -229,48 +285,60 @@ const deleteAlert = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const cancelAlert = (req, res) => {
-  const { id } = req.params;
-  
-  // Find alert
-  const alert = alertDB.findById(parseInt(id));
-  
-  // If alert not found, return not found
-  if (!alert) {
-    return res.status(404).json({
-      success: false,
-      message: `Alert with ID ${id} not found.`
-    });
-  }
-  
-  // If alert is already sent and it's been more than 5 minutes, prevent cancellation
-  if (alert.status === 'sent' && alert.sentAt) {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+const cancelAlert = async (req, res) => {
+  try {
+    const { id } = req.params;
     
-    if (alert.sentAt < fiveMinutesAgo) {
-      return res.status(400).json({
+    // Find alert
+    const alert = await alertDB.findById(parseInt(id));
+    
+    // If alert not found, return not found
+    if (!alert) {
+      return res.status(404).json({
         success: false,
-        message: 'Cannot cancel an alert that was sent more than 5 minutes ago.'
+        message: `Alert with ID ${id} not found.`
       });
     }
-  }
-  
-  // Update alert status to cancelled
-  alert.updateStatus('cancelled');
-  
-  // Notify connected clients via Socket.io
-  req.io.emit('alertCancelled', {
-    alertId: alert.id
-  });
-  
-  // Return success with updated alert
-  res.json({
-    success: true,
-    message: 'Alert cancelled successfully.',
-    data: {
-      alert
+    
+    // If alert is already sent and it's been more than 5 minutes, prevent cancellation
+    if (alert.status === 'sent' && alert.sentAt) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      
+      if (new Date(alert.sentAt) < fiveMinutesAgo) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot cancel an alert that was sent more than 5 minutes ago.'
+        });
+      }
     }
-  });
+    
+    // Update alert status to cancelled
+    const updatedAlert = await alertDB.update(parseInt(id), {
+      status: 'cancelled',
+      cancelledAt: new Date()
+    });
+    
+    // Notify connected clients via Socket.io
+    req.io.emit('alertCancelled', {
+      alertId: alert.id
+    });
+    
+    // Return success with updated alert
+    res.json({
+      success: true,
+      message: 'Alert cancelled successfully.',
+      data: {
+        alert: updatedAlert
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling alert:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 /**
@@ -278,74 +346,93 @@ const cancelAlert = (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const getAlertAnalytics = (req, res) => {
-  const alerts = alertDB.getAll();
-  
-  // Calculate overall statistics
-  const totalAlerts = alerts.length;
-  const sentAlerts = alerts.filter(alert => alert.status === 'sent').length;
-  const cancelledAlerts = alerts.filter(alert => alert.status === 'cancelled').length;
-  const failedAlerts = alerts.filter(alert => alert.status === 'failed').length;
-  const pendingAlerts = alerts.filter(alert => alert.status === 'pending').length;
-  
-  // Calculate delivery statistics
-  const deliveryStats = alerts.reduce(
-    (stats, alert) => {
-      stats.totalRecipients += alert.deliveryStats.total;
-      stats.sentNotifications += alert.deliveryStats.sent;
-      stats.failedNotifications += alert.deliveryStats.failed;
-      stats.pendingNotifications += alert.deliveryStats.pending;
-      return stats;
-    },
-    {
-      totalRecipients: 0,
-      sentNotifications: 0,
-      failedNotifications: 0,
-      pendingNotifications: 0
-    }
-  );
-  
-  // Calculate success rate
-  const successRate = deliveryStats.totalRecipients > 0
-    ? (deliveryStats.sentNotifications / deliveryStats.totalRecipients) * 100
-    : 0;
-  
-  // Group alerts by severity
-  const severityCounts = alerts.reduce(
-    (counts, alert) => {
-      counts[alert.severity] = (counts[alert.severity] || 0) + 1;
-      return counts;
-    },
-    {}
-  );
-  
-  // Group alerts by channel
-  const channelCounts = {};
-  alerts.forEach(alert => {
-    alert.channels.forEach(channel => {
-      channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+const getAlertAnalytics = async (req, res) => {
+  try {
+    // Get query parameters for possible filtering
+    const { startDate, endDate } = req.query;
+    
+    // Get alerts, possibly filtered by date range
+    const alerts = await alertDB.getAll();
+    
+    // Calculate overall statistics
+    const totalAlerts = alerts.length;
+    const sentAlerts = alerts.filter(alert => alert.status === 'sent').length;
+    const cancelledAlerts = alerts.filter(alert => alert.status === 'cancelled').length;
+    const failedAlerts = alerts.filter(alert => alert.status === 'failed').length;
+    const pendingAlerts = alerts.filter(alert => alert.status === 'pending').length;
+    
+    // Calculate delivery statistics
+    const deliveryStats = alerts.reduce(
+      (stats, alert) => {
+        if (alert.deliveryStats) {
+          stats.totalRecipients += alert.deliveryStats.total || 0;
+          stats.sentNotifications += alert.deliveryStats.sent || 0;
+          stats.failedNotifications += alert.deliveryStats.failed || 0;
+          stats.pendingNotifications += alert.deliveryStats.pending || 0;
+        }
+        return stats;
+      },
+      {
+        totalRecipients: 0,
+        sentNotifications: 0,
+        failedNotifications: 0,
+        pendingNotifications: 0
+      }
+    );
+    
+    // Calculate success rate
+    const successRate = deliveryStats.totalRecipients > 0
+      ? (deliveryStats.sentNotifications / deliveryStats.totalRecipients) * 100
+      : 0;
+    
+    // Group alerts by severity
+    const severityCounts = alerts.reduce(
+      (counts, alert) => {
+        if (alert.severity) {
+          counts[alert.severity] = (counts[alert.severity] || 0) + 1;
+        }
+        return counts;
+      },
+      {}
+    );
+    
+    // Group alerts by channel
+    const channelCounts = {};
+    alerts.forEach(alert => {
+      if (alert.channels && Array.isArray(alert.channels)) {
+        alert.channels.forEach(channel => {
+          channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+        });
+      }
     });
-  });
-  
-  // Return success with analytics
-  res.json({
-    success: true,
-    data: {
-      alertCounts: {
-        total: totalAlerts,
-        sent: sentAlerts,
-        cancelled: cancelledAlerts,
-        failed: failedAlerts,
-        pending: pendingAlerts
-      },
-      deliveryStats: {
-        ...deliveryStats,
-        successRate: successRate.toFixed(2)
-      },
-      severityCounts,
-      channelCounts
-    }
-  });
+    
+    // Return success with analytics
+    res.json({
+      success: true,
+      data: {
+        alertCounts: {
+          total: totalAlerts,
+          sent: sentAlerts,
+          cancelled: cancelledAlerts,
+          failed: failedAlerts,
+          pending: pendingAlerts
+        },
+        deliveryStats: {
+          ...deliveryStats,
+          successRate: successRate.toFixed(2)
+        },
+        severityCounts,
+        channelCounts
+      }
+    });
+  } catch (error) {
+    console.error('Error retrieving alert analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve alert analytics.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 /**
@@ -357,7 +444,7 @@ const identifyRecipients = async (targeting) => {
   const recipients = new Set();
   
   // Get all users
-  const allUsers = userDB.getAll();
+  const allUsers = await userDB.getAll();
   
   // If targeting specific users, add them to recipients
   if ((targeting.specific && Array.isArray(targeting.specific)) || 
@@ -366,21 +453,24 @@ const identifyRecipients = async (targeting) => {
     // Support both 'specific' and 'userIds' for backward compatibility
     const userIdList = targeting.userIds || targeting.specific;
     
-    userIdList.forEach(userId => {
-      const user = userDB.findById(parseInt(userId));
+    // Process user IDs in parallel
+    const userPromises = userIdList.map(async (userId) => {
+      const user = await userDB.findById(parseInt(userId));
       if (user) {
         recipients.add(user);
       }
     });
+    
+    await Promise.all(userPromises);
   }
   
   // If targeting roles, add users with those roles to recipients
   if (targeting.roles && Array.isArray(targeting.roles)) {
-    allUsers.forEach(user => {
-      if (targeting.roles.includes(user.role)) {
-        recipients.add(user);
-      }
-    });
+    // Process each role separately for efficiency
+    for (const role of targeting.roles) {
+      const roleUsers = await userDB.getAllByRole(role);
+      roleUsers.forEach(user => recipients.add(user));
+    }
   }
   
   // Convert Set to Array
@@ -398,7 +488,7 @@ const acknowledgeAlert = async (req, res) => {
   
   try {
     // Get alert by ID
-    const alert = alertDB.findById(parseInt(id));
+    const alert = await alertDB.findById(parseInt(id));
     
     // If alert not found, return not found
     if (!alert) {
@@ -416,25 +506,30 @@ const acknowledgeAlert = async (req, res) => {
       });
     }
     
-    // Add acknowledgment to the alert
-    const isAdded = alert.addAcknowledgment(userId);
+    // Check if already acknowledged
+    const existingAck = await alertDB.hasUserAcknowledged(parseInt(id), userId);
     
     // If already acknowledged, return conflict
-    if (!isAdded) {
+    if (existingAck) {
       return res.status(409).json({
         success: false,
         message: 'You have already acknowledged this alert.'
       });
     }
     
-    // Update alert in database
-    alertDB.update(alert);
+    // Add acknowledgment to the alert
+    const acknowledgedAt = new Date();
+    const notes = req.body.notes || 'Acknowledged via API';
+    await alertDB.addAcknowledgment(parseInt(id), userId, notes);
+    
+    // Get updated acknowledgment stats
+    const acknowledgments = await alertDB.getAcknowledgments(parseInt(id));
     
     // Notify connected clients via Socket.io
     req.io.emit('alertAcknowledged', {
-      alertId: alert.id,
+      alertId: parseInt(id),
       userId: userId,
-      timestamp: new Date()
+      timestamp: acknowledgedAt
     });
     
     // Return success with acknowledgment details
@@ -442,9 +537,9 @@ const acknowledgeAlert = async (req, res) => {
       success: true,
       message: 'Alert acknowledged successfully.',
       data: {
-        alertId: alert.id,
-        acknowledgedAt: new Date(),
-        acknowledgmentStats: alert.getAcknowledgmentStats()
+        alertId: parseInt(id),
+        acknowledgedAt,
+        acknowledgments
       }
     });
   } catch (error) {

@@ -12,7 +12,7 @@ const userRoutes = require('./routes/userRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
 
 // Initialize database
-const { initializeDatabase } = require('./utils/database');
+const { db, pool } = require('./db');
 
 // Create Express app
 const app = express();
@@ -20,7 +20,8 @@ const server = http.createServer(app);
 
 // Initialize Socket.io with CORS settings and authentication
 const jwt = require('jsonwebtoken');
-const { userDB } = require('./utils/database');
+const schema = require('./shared/schema');
+const { eq } = require('drizzle-orm');
 const JWT_SECRET = process.env.JWT_SECRET || 'emergency-alert-system-secret-key';
 
 const io = socketIo(server, {
@@ -31,7 +32,7 @@ const io = socketIo(server, {
 });
 
 // Socket.io middleware for authentication
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   // Check for authentication token in handshake
   const token = socket.handshake.auth.token || socket.handshake.query.token;
   
@@ -43,8 +44,8 @@ io.use((socket, next) => {
     // Verify the token
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Find the user
-    const user = userDB.findById(decoded.userId);
+    // Find the user from the database
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, decoded.userId));
     
     if (!user) {
       return next(new Error('User not found'));
@@ -78,8 +79,8 @@ console.log(`- SMS Notifications (Twilio): ${hasTwilioCredentials ? 'Available' 
 console.log(`- Email Notifications (SendGrid): ${hasSendGridKey ? 'Available' : 'Not configured'}`);
 console.log('------------------------');
 
-// Initialize database with sample data
-initializeDatabase();
+// Using PostgreSQL database instead of in-memory database
+console.log('Using PostgreSQL database');
 
 // Socket.io connection
 io.on('connection', (socket) => {
@@ -144,18 +145,32 @@ io.on('connection', (socket) => {
   });
   
   // Handle alerts acknowledgment
-  socket.on('acknowledgeAlert', (data) => {
+  socket.on('acknowledgeAlert', async (data) => {
     // If authenticated, use socket.user
     const userId = socket.user ? socket.user.id : data.userId;
+    const timestamp = new Date();
     
-    // Broadcast to admin and operator rooms that the alert was acknowledged
-    io.to('admin').to('operator').emit('alertAcknowledged', {
-      alertId: data.alertId,
-      userId: userId,
-      timestamp: new Date()
-    });
-    
-    console.log(`Alert ${data.alertId} acknowledged by user ${userId}`);
+    try {
+      // Store acknowledgment in the database
+      await db.insert(schema.alertAcknowledgments).values({
+        alertId: data.alertId,
+        userId: userId,
+        acknowledgedAt: timestamp,
+        notes: data.notes || 'Acknowledged from mobile app'
+      });
+      
+      // Broadcast to admin and operator rooms that the alert was acknowledged
+      io.to('admin').to('operator').emit('alertAcknowledged', {
+        alertId: data.alertId,
+        userId: userId,
+        timestamp: timestamp
+      });
+      
+      console.log(`Alert ${data.alertId} acknowledged by user ${userId}`);
+    } catch (error) {
+      console.error(`Error acknowledging alert: ${error.message}`);
+      socket.emit('error', { message: 'Failed to acknowledge alert' });
+    }
   });
   
   socket.on('disconnect', () => {

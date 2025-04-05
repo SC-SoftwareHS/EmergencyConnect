@@ -2,7 +2,7 @@
  * Authentication middleware for the emergency alert system
  */
 const jwt = require('jsonwebtoken');
-const { userDB } = require('../utils/database');
+const { userDB } = require('../services/databaseService');
 
 // Secret key for JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'emergency-alert-system-secret-key';
@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'emergency-alert-system-secret-key'
  * @param {Object} res - Express response object
  * @param {Function} next - Express next middleware function
  */
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   // Get token from header
   const token = req.header('Authorization')?.replace('Bearer ', '');
   
@@ -30,7 +30,7 @@ const authenticate = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     
     // Find user
-    const user = userDB.findById(decoded.userId);
+    const user = await userDB.findById(decoded.userId);
     
     // If user not found, return unauthorized
     if (!user) {
@@ -81,7 +81,7 @@ const generateToken = (user) => {
   return jwt.sign(
     { userId: user.id },
     JWT_SECRET,
-    { expiresIn: '1d' }
+    { expiresIn: '7d' } // Extended token expiration to 7 days for better UX
   );
 };
 
