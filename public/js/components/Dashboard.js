@@ -109,7 +109,7 @@ const Dashboard = ({ user }) => {
           </span>
         </div>
         <div className="flex space-x-4">
-          {(user.isAdmin || user.role === 'operator') && (
+          {(user.role === 'admin' || user.role === 'operator') && (
             <button
               onClick={() => setActiveTab('create')}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md shadow-sm flex items-center"
@@ -400,7 +400,7 @@ const Dashboard = ({ user }) => {
         </button>
         
         {/* Only admin and operator can see incidents */}
-        {(user.isAdmin() || user.role === 'operator') && (
+        {(user.role === 'admin' || user.role === 'operator') && (
           <button
             onClick={() => setActiveTab('incidents')}
             className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
@@ -415,7 +415,7 @@ const Dashboard = ({ user }) => {
         )}
         
         {/* Only admin can see users */}
-        {user.isAdmin() && (
+        {user.role === 'admin' && (
           <button
             onClick={() => setActiveTab('users')}
             className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${

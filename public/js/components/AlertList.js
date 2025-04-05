@@ -390,7 +390,7 @@ const AlertList = ({ user }) => {
                 )}
                 
                 <div className="flex gap-2">
-                  {alert.status === 'pending' && (user.isAdmin() || user.role === 'operator') && (
+                  {alert.status === 'pending' && (user.role === 'admin' || user.role === 'operator') && (
                     <button
                       onClick={() => handleCancelAlert(alert.id)}
                       className="px-3 py-1 text-sm text-red-600 hover:text-red-800 border border-red-200 rounded-md hover:bg-red-50"
