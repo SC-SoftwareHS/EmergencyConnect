@@ -12,7 +12,7 @@
 
 ### Admin Role
 - [x] Login
-- [ ] View Dashboard with Analytics
+- [x] View Dashboard with Analytics
 - [ ] Create New Alert
 - [ ] Manage Incidents
 - [ ] Manage Users
