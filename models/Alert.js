@@ -22,6 +22,7 @@ class Alert {
       failed: 0,
       pending: 0
     };
+    this.acknowledgments = []; // Array of {userId, timestamp} objects
   }
 
   /**
@@ -80,6 +81,47 @@ class Alert {
       this.targeting.specific = this.targeting.specific.filter(id => id !== userId);
       this.updatedAt = new Date();
     }
+  }
+  
+  /**
+   * Add an acknowledgment from a user
+   * @param {number} userId - ID of the user acknowledging the alert
+   * @returns {boolean} True if the acknowledgment was added, false if already acknowledged
+   */
+  addAcknowledgment(userId) {
+    // Check if this user has already acknowledged the alert
+    if (this.hasUserAcknowledged(userId)) {
+      return false;
+    }
+    
+    // Add the acknowledgment
+    this.acknowledgments.push({
+      userId,
+      timestamp: new Date()
+    });
+    
+    this.updatedAt = new Date();
+    return true;
+  }
+  
+  /**
+   * Check if a user has already acknowledged this alert
+   * @param {number} userId - ID of the user to check
+   * @returns {boolean} True if the user has already acknowledged
+   */
+  hasUserAcknowledged(userId) {
+    return this.acknowledgments.some(ack => ack.userId === userId);
+  }
+  
+  /**
+   * Get acknowledgment statistics
+   * @returns {Object} Object with acknowledgment stats
+   */
+  getAcknowledgmentStats() {
+    return {
+      total: this.acknowledgments.length,
+      users: this.acknowledgments.map(ack => ack.userId)
+    };
   }
 }
 

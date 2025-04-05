@@ -187,13 +187,26 @@ const alertDB = {
     return db.alerts.find(alert => alert.id === id);
   },
   
-  update: (id, updates) => {
+  updateById: (id, updates) => {
     const alert = alertDB.findById(id);
     if (alert) {
       Object.assign(alert, updates);
       alert.updatedAt = new Date();
       return alert;
     }
+    return null;
+  },
+  
+  update: (alertObj) => {
+    // Find the alert in the db by id
+    const index = db.alerts.findIndex(a => a.id === alertObj.id);
+    
+    // If alert exists, update it
+    if (index !== -1) {
+      db.alerts[index] = alertObj;
+      return alertObj;
+    }
+    
     return null;
   },
   

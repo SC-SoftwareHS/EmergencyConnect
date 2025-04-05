@@ -9,7 +9,8 @@ const {
   updateAlert,
   deleteAlert,
   cancelAlert,
-  getAlertAnalytics
+  getAlertAnalytics,
+  acknowledgeAlert
 } = require('../controllers/alertController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -95,6 +96,17 @@ router.post(
   authenticate,
   authorize(['admin', 'operator']),
   cancelAlert
+);
+
+/**
+ * @route POST /api/alerts/:id/acknowledge
+ * @desc Acknowledge an alert
+ * @access Private (subscriber)
+ */
+router.post(
+  '/:id/acknowledge',
+  authenticate,
+  acknowledgeAlert
 );
 
 module.exports = router;

@@ -163,6 +163,17 @@ const api = (() => {
   };
   
   /**
+   * Acknowledge an alert
+   * @param {number} id - Alert ID
+   * @returns {Promise<Object>} Response with acknowledgment data
+   */
+  const acknowledgeAlert = (id) => {
+    return sendRequest(`/alerts/${id}/acknowledge`, {
+      method: 'POST'
+    });
+  };
+  
+  /**
    * Delete an alert
    * @param {number} id - Alert ID
    * @returns {Promise<Object>} Response with success message
@@ -390,6 +401,7 @@ const api = (() => {
     createAlert,
     updateAlert,
     cancelAlert,
+    acknowledgeAlert,
     deleteAlert,
     getAlertAnalytics,
     getUsers,

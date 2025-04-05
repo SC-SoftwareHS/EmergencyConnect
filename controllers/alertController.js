@@ -382,6 +382,77 @@ const identifyRecipients = async (targeting) => {
   return Array.from(recipients);
 };
 
+/**
+ * Acknowledge an alert
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const acknowledgeAlert = async (req, res) => {
+  const { alertId } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    // Get alert by ID
+    const alert = alertDB.findById(alertId);
+    
+    // If alert not found, return not found
+    if (!alert) {
+      return res.status(404).json({
+        success: false,
+        message: 'Alert not found.'
+      });
+    }
+    
+    // Check if the alert is in a state that can be acknowledged
+    if (alert.status !== 'sent') {
+      return res.status(400).json({
+        success: false,
+        message: `Alert cannot be acknowledged in '${alert.status}' status.`
+      });
+    }
+    
+    // Add acknowledgment to the alert
+    const isAdded = alert.addAcknowledgment(userId);
+    
+    // If already acknowledged, return conflict
+    if (!isAdded) {
+      return res.status(409).json({
+        success: false,
+        message: 'You have already acknowledged this alert.'
+      });
+    }
+    
+    // Update alert in database
+    alertDB.update(alert);
+    
+    // Notify connected clients via Socket.io
+    req.io.emit('alertAcknowledged', {
+      alertId: alert.id,
+      userId: userId,
+      timestamp: new Date()
+    });
+    
+    // Return success with acknowledgment details
+    res.json({
+      success: true,
+      message: 'Alert acknowledged successfully.',
+      data: {
+        alertId: alert.id,
+        acknowledgedAt: new Date(),
+        acknowledgmentStats: alert.getAcknowledgmentStats()
+      }
+    });
+  } catch (error) {
+    console.error('Error acknowledging alert:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to acknowledge alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   createAlert,
   getAllAlerts,
@@ -389,5 +460,6 @@ module.exports = {
   updateAlert,
   deleteAlert,
   cancelAlert,
-  getAlertAnalytics
+  getAlertAnalytics,
+  acknowledgeAlert
 };

@@ -6,6 +6,7 @@ const AlertList = ({ user }) => {
   const [alerts, setAlerts] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [acknowledgedAlerts, setAcknowledgedAlerts] = React.useState(new Set());
   const [filter, setFilter] = React.useState({
     status: '',
     severity: ''
@@ -43,12 +44,36 @@ const AlertList = ({ user }) => {
       );
     });
     
+    // Listen for acknowledged alerts
+    socketService.onAlertAcknowledged((data) => {
+      // Update alerts with acknowledgment information
+      if (user.role === 'admin' || user.role === 'operator') {
+        setAlerts(prevAlerts => 
+          prevAlerts.map(alert => {
+            if (alert.id === data.alertId) {
+              // Add acknowledgment to the alert's data
+              const acknowledgments = alert.acknowledgments || [];
+              return {
+                ...alert,
+                acknowledgments: [...acknowledgments, {
+                  userId: data.userId,
+                  timestamp: data.timestamp
+                }]
+              };
+            }
+            return alert;
+          })
+        );
+      }
+    });
+    
     // Clean up listeners on unmount
     return () => {
       socketService.offNewAlert();
       socketService.offAlertCancelled();
+      socketService.offAlertAcknowledged();
     };
-  }, []);
+  }, [user.role]);
   
   // Clear highlight effect after 2 seconds
   React.useEffect(() => {
@@ -116,6 +141,94 @@ const AlertList = ({ user }) => {
           alert('An error occurred while cancelling the alert');
         });
     }
+  };
+  
+  // Handle alert acknowledgment
+  const handleAcknowledgeAlert = (alertId) => {
+    if (acknowledgedAlerts.has(alertId)) {
+      return; // Already acknowledged
+    }
+    
+    // Send acknowledgment via the API
+    api.acknowledgeAlert(alertId)
+      .then(response => {
+        if (response.success) {
+          // Update local state to mark as acknowledged
+          setAcknowledgedAlerts(prev => new Set(prev).add(alertId));
+          
+          // Show confirmation toast
+          const alertToast = document.createElement('div');
+          alertToast.className = 'fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md toast-notification';
+          alertToast.innerHTML = `
+            <div class="flex items-center">
+              <i class="fas fa-check-circle mr-2"></i>
+              <p>Alert acknowledged</p>
+            </div>
+          `;
+          document.body.appendChild(alertToast);
+          
+          // Remove toast after 3 seconds
+          setTimeout(() => {
+            alertToast.remove();
+          }, 3000);
+        } else {
+          // Show error toast
+          const errorToast = document.createElement('div');
+          errorToast.className = 'fixed bottom-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md toast-notification';
+          errorToast.innerHTML = `
+            <div class="flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>
+              <p>${response.message || 'Failed to acknowledge alert'}</p>
+            </div>
+          `;
+          document.body.appendChild(errorToast);
+          
+          // Remove toast after 3 seconds
+          setTimeout(() => {
+            errorToast.remove();
+          }, 3000);
+        }
+      })
+      .catch(err => {
+        console.error('Error acknowledging alert:', err);
+        
+        // Show error toast
+        const errorToast = document.createElement('div');
+        errorToast.className = 'fixed bottom-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md toast-notification';
+        errorToast.innerHTML = `
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <p>An error occurred while acknowledging the alert</p>
+          </div>
+        `;
+        document.body.appendChild(errorToast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+          errorToast.remove();
+        }, 3000);
+      });
+  };
+  
+  // Check if a user has acknowledged an alert
+  const hasUserAcknowledged = (alert) => {
+    if (acknowledgedAlerts.has(alert.id)) {
+      return true;
+    }
+    
+    if (alert.acknowledgments && alert.acknowledgments.some(ack => ack.userId === user.id)) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // Get acknowledgment count for an alert
+  const getAcknowledgmentCount = (alert) => {
+    if (!alert.acknowledgments) {
+      return 0;
+    }
+    return alert.acknowledgments.length;
   };
   
   // Filter alerts based on selected filters
@@ -263,25 +376,69 @@ const AlertList = ({ user }) => {
                 ))}
               </div>
               
-              {alert.status === 'pending' && (user.isAdmin() || user.role === 'operator') && (
-                <div className="flex justify-end mt-2">
-                  <button
-                    onClick={() => handleCancelAlert(alert.id)}
-                    className="text-sm text-red-600 hover:text-red-800"
-                  >
-                    Cancel Alert
-                  </button>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+                {alert.status === 'sent' && (
+                  <div className="text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <i className="fas fa-chart-pie mr-1"></i>
+                      <span>
+                        {alert.deliveryStats.sent}/{alert.deliveryStats.total} sent 
+                        {alert.deliveryStats.failed > 0 && ` (${alert.deliveryStats.failed} failed)`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex gap-2">
+                  {alert.status === 'pending' && (user.isAdmin() || user.role === 'operator') && (
+                    <button
+                      onClick={() => handleCancelAlert(alert.id)}
+                      className="px-3 py-1 text-sm text-red-600 hover:text-red-800 border border-red-200 rounded-md hover:bg-red-50"
+                    >
+                      <i className="fas fa-ban mr-1"></i>
+                      Cancel
+                    </button>
+                  )}
+                  
+                  {alert.status === 'sent' && (
+                    <>
+                      {user.role === 'admin' || user.role === 'operator' ? (
+                        <div className="text-sm text-blue-600">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          {getAcknowledgmentCount(alert)} {getAcknowledgmentCount(alert) === 1 ? 'acknowledgment' : 'acknowledgments'}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAcknowledgeAlert(alert.id)}
+                          disabled={hasUserAcknowledged(alert)}
+                          className={`px-3 py-1 text-sm rounded-md flex items-center ${
+                            hasUserAcknowledged(alert)
+                              ? 'bg-green-100 text-green-800 cursor-default'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                        >
+                          <i className={`fas ${hasUserAcknowledged(alert) ? 'fa-check' : 'fa-bell'} mr-1`}></i>
+                          {hasUserAcknowledged(alert) ? 'Acknowledged' : 'Acknowledge'}
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
               
-              {alert.status === 'sent' && (
-                <div className="mt-2 text-sm">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Delivery:</span>
-                    <span>
-                      {alert.deliveryStats.sent}/{alert.deliveryStats.total} sent 
-                      {alert.deliveryStats.failed > 0 && ` (${alert.deliveryStats.failed} failed)`}
-                    </span>
+              {/* Show acknowledgments for admin and operator */}
+              {(user.role === 'admin' || user.role === 'operator') && 
+               alert.acknowledgments && 
+               alert.acknowledgments.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-gray-100">
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Acknowledgments:</h4>
+                  <div className="space-y-1">
+                    {alert.acknowledgments.map((ack, index) => (
+                      <div key={index} className="text-sm flex items-center text-gray-600">
+                        <i className="fas fa-user-check text-green-500 mr-1"></i>
+                        <span>User {ack.userId} • {new Date(ack.timestamp).toLocaleString()}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -289,6 +446,21 @@ const AlertList = ({ user }) => {
           ))}
         </div>
       )}
+      
+      {/* CSS for toast */}
+      <style jsx>{`
+        .toast-notification {
+          z-index: 1000;
+          animation: fadeInOut 3s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(20px); }
+          10% { opacity: 1; transform: translateY(0); }
+          90% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-20px); }
+        }
+      `}</style>
     </div>
   );
 };
