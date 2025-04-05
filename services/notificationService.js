@@ -202,11 +202,70 @@ const simulateSmsSending = async () => {
 const sendPushNotification = async (alert, recipient) => {
   console.log(`[PUSH] Sending alert "${alert.title}" to user ${recipient.id}`);
   
-  // Simulate sending push notification with delay
-  // In the future, this would use Firebase Cloud Messaging or a similar service
-  await new Promise(resolve => setTimeout(resolve, 100));
+  // Check if recipient has a push token
+  if (!recipient.pushToken) {
+    console.log(`User ${recipient.id} has no push token registered`);
+    return { success: false, error: 'No push token registered' };
+  }
   
-  return { success: true, provider: 'simulated' };
+  // Determine if this is an Expo push token
+  const isExpoToken = recipient.pushToken.startsWith('ExponentPushToken[');
+  
+  if (isExpoToken) {
+    // In a real implementation, we would use the Expo Push Notification API
+    // For reference: https://docs.expo.dev/push-notifications/sending-notifications/
+    
+    try {
+      console.log(`Sending push notification via Expo service to token: ${recipient.pushToken}`);
+      
+      // This would be the actual implementation using Expo's push service
+      // const message = {
+      //   to: recipient.pushToken,
+      //   sound: 'default',
+      //   title: `ALERT: ${alert.title}`,
+      //   body: alert.message,
+      //   data: { alertId: alert.id, severity: alert.severity },
+      //   priority: 'high',
+      //   channelId: 'emergency-alerts',
+      // };
+      
+      // const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      //   method: 'POST',
+      //   headers: {
+      //     Accept: 'application/json',
+      //     'Accept-encoding': 'gzip, deflate',
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(message),
+      // });
+      
+      // Real implementation would check the response status
+      
+      // Simulate sending for now
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return { 
+        success: true, 
+        provider: 'expo-simulated',
+        message: 'Push notification would be sent via Expo Push Service' 
+      };
+    } catch (error) {
+      console.error('Error sending Expo push notification:', error);
+      return { success: false, error: `Expo push error: ${error.message}` };
+    }
+  } else {
+    // For FCM or other push services
+    console.log(`Token type not recognized: ${recipient.pushToken}`);
+    
+    // Simulate sending push notification with delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    return { 
+      success: true, 
+      provider: 'other-simulated',
+      message: 'Push notification would be sent via FCM or other service' 
+    };
+  }
 };
 
 /**

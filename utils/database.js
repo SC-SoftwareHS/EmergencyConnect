@@ -116,7 +116,8 @@ const userDB = {
       userData.password,
       userData.role || 'subscriber',
       userData.channels || { email: true, sms: false, push: false },
-      userData.phoneNumber || null
+      userData.phoneNumber || null,
+      userData.pushToken || null
     );
     db.users.push(user);
     return user;

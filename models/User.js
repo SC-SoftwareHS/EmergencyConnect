@@ -3,7 +3,7 @@
  * Represents a user in the system with role-based permissions
  */
 class User {
-  constructor(id, username, email, password, role, channels = { email: true, sms: false, push: false }, phoneNumber = null) {
+  constructor(id, username, email, password, role, channels = { email: true, sms: false, push: false }, phoneNumber = null, pushToken = null) {
     this.id = id;
     this.username = username;
     this.email = email;
@@ -11,6 +11,7 @@ class User {
     this.role = role; // 'admin', 'operator', or 'subscriber'
     this.channels = channels; // notification preferences
     this.phoneNumber = phoneNumber;
+    this.pushToken = pushToken; // Token for push notifications (e.g., Expo Push Token)
     this.createdAt = new Date();
     this.updatedAt = new Date();
   }
@@ -45,7 +46,7 @@ class User {
    * @param {Object} updates - Fields to update
    */
   update(updates) {
-    const allowedUpdates = ['username', 'email', 'phoneNumber', 'channels', 'role'];
+    const allowedUpdates = ['username', 'email', 'phoneNumber', 'channels', 'role', 'pushToken'];
     
     for (const key in updates) {
       if (allowedUpdates.includes(key)) {
@@ -54,6 +55,19 @@ class User {
     }
     
     this.updatedAt = new Date();
+  }
+  
+  /**
+   * Register a push notification token for this user
+   * @param {string} token - Push notification token
+   */
+  registerPushToken(token) {
+    if (token && token !== this.pushToken) {
+      this.pushToken = token;
+      this.updatedAt = new Date();
+      return true;
+    }
+    return false;
   }
 }
 

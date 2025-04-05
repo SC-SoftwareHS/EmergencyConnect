@@ -10,7 +10,8 @@ const {
   deleteUser,
   updateNotificationPreferences,
   getUserSubscription,
-  updateUserSubscription
+  updateUserSubscription,
+  registerPushToken
 } = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -160,6 +161,28 @@ router.put(
     });
   },
   updateUserSubscription
+);
+
+/**
+ * @route POST /api/users/:id/push-token
+ * @desc Register a push notification token for a user
+ * @access Private (admin or self)
+ */
+router.post(
+  '/:id/push-token',
+  authenticate,
+  (req, res, next) => {
+    const userId = parseInt(req.params.id);
+    // Allow access if user is admin or updating their own data
+    if (req.user.isAdmin() || req.user.id === userId) {
+      return next();
+    }
+    res.status(403).json({
+      success: false,
+      message: 'You can only register a push token for your own account unless you are an admin.'
+    });
+  },
+  registerPushToken
 );
 
 module.exports = router;

@@ -360,6 +360,52 @@ const updateUserSubscription = (req, res) => {
   });
 };
 
+/**
+ * Register a push notification token for a user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const registerPushToken = (req, res) => {
+  const { id } = req.params;
+  const { pushToken } = req.body;
+  
+  // Validate push token
+  if (!pushToken || typeof pushToken !== 'string') {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid push token. Expected a string.'
+    });
+  }
+  
+  // Find user
+  const user = userDB.findById(parseInt(id));
+  
+  // If user not found, return not found
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: `User with ID ${id} not found.`
+    });
+  }
+  
+  // Register push token
+  const tokenChanged = user.registerPushToken(pushToken);
+  
+  // If token was registered, update user in database
+  if (tokenChanged) {
+    userDB.update(parseInt(id), { pushToken });
+  }
+  
+  // Return success
+  res.json({
+    success: true,
+    message: tokenChanged ? 'Push token registered successfully.' : 'Push token already registered.',
+    data: {
+      user: user.getSafeUser()
+    }
+  });
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -368,5 +414,6 @@ module.exports = {
   deleteUser,
   updateNotificationPreferences,
   getUserSubscription,
-  updateUserSubscription
+  updateUserSubscription,
+  registerPushToken
 };
