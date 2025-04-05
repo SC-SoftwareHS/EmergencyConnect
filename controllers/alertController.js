@@ -388,12 +388,12 @@ const identifyRecipients = async (targeting) => {
  * @param {Object} res - Express response object
  */
 const acknowledgeAlert = async (req, res) => {
-  const { alertId } = req.params;
+  const { id } = req.params;
   const userId = req.user.id;
   
   try {
     // Get alert by ID
-    const alert = alertDB.findById(alertId);
+    const alert = alertDB.findById(parseInt(id));
     
     // If alert not found, return not found
     if (!alert) {
