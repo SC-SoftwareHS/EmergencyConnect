@@ -101,14 +101,14 @@ const sendEmailNotification = async (alert, recipient) => {
     return { success: false, error: 'Recipient has no email address' };
   }
   
-  console.log(`[EMAIL] Sending alert "${alert.title}" to ${recipient.email}`);
+  console.log(`[EMAIL] Sending alert "${alert.title}" to ${recipient.email} from ${process.env.SENDGRID_FROM_EMAIL || 'test@sendgrid.net'}`);
   
   // If SendGrid is configured, use it to send the email
   if (hasSendGridKey) {
     try {
       const msg = {
         to: recipient.email,
-        from: 'test@sendgrid.net', // Use a verified sender in SendGrid
+        from: process.env.SENDGRID_FROM_EMAIL || 'test@sendgrid.net', // Use verified sender from env or fallback
         subject: `ALERT: ${alert.title}`,
         text: alert.message,
         html: `
