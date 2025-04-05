@@ -14,7 +14,7 @@
 - [x] Login
 - [x] View Dashboard with Analytics
 - [ ] Create New Alert
-- [ ] Manage Incidents
+- [x] Manage Incidents
 - [ ] Manage Users
 - [ ] View Alert Acknowledgments
 - [ ] Cancel Pending Alerts
@@ -24,7 +24,7 @@
 - [ ] Login
 - [ ] View Operator Dashboard
 - [ ] Create New Alert
-- [ ] Manage Incidents
+- [x] Manage Incidents
 - [ ] View Alert Acknowledgments
 - [ ] Cancel Pending Alerts
 - [ ] Real-time Updates
