@@ -9,6 +9,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const userRoutes = require('./routes/userRoutes');
+const incidentRoutes = require('./routes/incidentRoutes');
 
 // Initialize database
 const { initializeDatabase } = require('./utils/database');
@@ -38,9 +39,45 @@ initializeDatabase();
 io.on('connection', (socket) => {
   console.log('New client connected', socket.id);
   
-  socket.on('joinRoom', (userId) => {
-    socket.join(`user-${userId}`);
-    console.log(`User ${userId} joined their room`);
+  // Handle user joining their personal room and role-based rooms
+  socket.on('joinRoom', (userData) => {
+    // If we just got a userId instead of a full object, handle legacy clients
+    if (typeof userData === 'number' || typeof userData === 'string') {
+      socket.join(`user-${userData}`);
+      console.log(`User ${userData} joined their personal room`);
+      return;
+    }
+    
+    // Join personal room
+    if (userData.id) {
+      socket.join(`user-${userData.id}`);
+      console.log(`User ${userData.id} joined their personal room`);
+    }
+    
+    // Join role-based room
+    if (userData.role) {
+      socket.join(userData.role);
+      console.log(`User ${userData.id} joined ${userData.role} room`);
+    }
+    
+    // Send acknowledgment
+    socket.emit('roomJoined', {
+      userId: userData.id,
+      role: userData.role,
+      success: true
+    });
+  });
+  
+  // Handle alerts acknowledgment
+  socket.on('acknowledgeAlert', (data) => {
+    // Broadcast to admin and operator rooms that the alert was acknowledged
+    io.to('admin').to('operator').emit('alertAcknowledged', {
+      alertId: data.alertId,
+      userId: data.userId,
+      timestamp: new Date()
+    });
+    
+    console.log(`Alert ${data.alertId} acknowledged by user ${data.userId}`);
   });
   
   socket.on('disconnect', () => {
@@ -58,6 +95,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/incidents', incidentRoutes);
 
 // Serve React app for any other routes
 app.get('*', (req, res) => {

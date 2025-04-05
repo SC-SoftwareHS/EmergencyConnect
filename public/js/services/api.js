@@ -281,6 +281,104 @@ const api = (() => {
     });
   };
   
+  /**
+   * Get all incidents
+   * @param {Object} params - Query parameters
+   * @returns {Promise<Object>} Response with incidents data
+   */
+  const getIncidents = (params = {}) => {
+    // Build query string from params
+    const queryString = Object.keys(params)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join('&');
+    
+    return sendRequest(`/incidents${queryString ? `?${queryString}` : ''}`);
+  };
+  
+  /**
+   * Get a specific incident by ID
+   * @param {number} id - Incident ID
+   * @returns {Promise<Object>} Response with incident data
+   */
+  const getIncidentById = (id) => {
+    return sendRequest(`/incidents/${id}`);
+  };
+  
+  /**
+   * Create a new incident
+   * @param {Object} incidentData - Incident data
+   * @returns {Promise<Object>} Response with created incident data
+   */
+  const createIncident = (incidentData) => {
+    return sendRequest('/incidents', {
+      method: 'POST',
+      body: JSON.stringify(incidentData)
+    });
+  };
+  
+  /**
+   * Update an incident
+   * @param {number} id - Incident ID
+   * @param {Object} incidentData - Updated incident data
+   * @returns {Promise<Object>} Response with updated incident data
+   */
+  const updateIncident = (id, incidentData) => {
+    return sendRequest(`/incidents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(incidentData)
+    });
+  };
+  
+  /**
+   * Update incident status
+   * @param {number} id - Incident ID
+   * @param {Object} statusData - Status data to update
+   * @returns {Promise<Object>} Response with updated incident data
+   */
+  const updateIncidentStatus = (id, statusData) => {
+    return sendRequest(`/incidents/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(statusData)
+    });
+  };
+  
+  /**
+   * Add a response to an incident
+   * @param {number} id - Incident ID
+   * @param {Object} responseData - Response data to add
+   * @returns {Promise<Object>} Response with updated incident data
+   */
+  const addIncidentResponse = (id, responseData) => {
+    return sendRequest(`/incidents/${id}/responses`, {
+      method: 'POST',
+      body: JSON.stringify(responseData)
+    });
+  };
+  
+  /**
+   * Create an alert from an incident
+   * @param {number} id - Incident ID
+   * @param {Object} alertData - Alert data
+   * @returns {Promise<Object>} Response with created alert data
+   */
+  const createAlertFromIncident = (id, alertData) => {
+    return sendRequest(`/incidents/${id}/alert`, {
+      method: 'POST',
+      body: JSON.stringify(alertData)
+    });
+  };
+  
+  /**
+   * Delete an incident
+   * @param {number} id - Incident ID
+   * @returns {Promise<Object>} Response with success message
+   */
+  const deleteIncident = (id) => {
+    return sendRequest(`/incidents/${id}`, {
+      method: 'DELETE'
+    });
+  };
+  
   // Return public methods
   return {
     login,
@@ -301,6 +399,14 @@ const api = (() => {
     deleteUser,
     updateNotificationPreferences,
     getUserSubscription,
-    updateUserSubscription
+    updateUserSubscription,
+    getIncidents,
+    getIncidentById,
+    createIncident,
+    updateIncident,
+    updateIncidentStatus,
+    addIncidentResponse,
+    createAlertFromIncident,
+    deleteIncident
   };
 })();

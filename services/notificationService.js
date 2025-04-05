@@ -2,6 +2,38 @@
  * Notification service for the emergency alert system
  * Handles sending notifications via different channels
  */
+const sgMail = require('@sendgrid/mail');
+const twilio = require('twilio');
+
+// Initialize Twilio client if credentials are available
+let twilioClient = null;
+const hasTwilioCredentials = process.env.TWILIO_ACCOUNT_SID && 
+                            process.env.TWILIO_AUTH_TOKEN && 
+                            process.env.TWILIO_PHONE_NUMBER;
+
+if (hasTwilioCredentials) {
+  try {
+    twilioClient = twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
+    );
+    console.log('Twilio client initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Twilio client:', error);
+  }
+}
+
+// Initialize SendGrid if API key is available
+let hasSendGridKey = !!process.env.SENDGRID_API_KEY;
+if (hasSendGridKey) {
+  try {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    console.log('SendGrid API key set successfully');
+  } catch (error) {
+    console.error('Failed to set SendGrid API key:', error);
+    hasSendGridKey = false;
+  }
+}
 
 /**
  * Send an alert to recipients via specified channels
@@ -65,29 +97,56 @@ const sendAlertNotifications = async (alert, recipients) => {
  * @returns {Promise<Object>} Notification result
  */
 const sendEmailNotification = async (alert, recipient) => {
+  if (!recipient.email) {
+    return { success: false, error: 'Recipient has no email address' };
+  }
+  
   console.log(`[EMAIL] Sending alert "${alert.title}" to ${recipient.email}`);
   
-  // Simulate sending email with delay
+  // If SendGrid is configured, use it to send the email
+  if (hasSendGridKey) {
+    try {
+      const msg = {
+        to: recipient.email,
+        from: 'alerts@emergency-system.com', // Use a verified sender in SendGrid
+        subject: `ALERT: ${alert.title}`,
+        text: alert.message,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: ${getSeverityColor(alert.severity)}; padding: 15px; text-align: center;">
+              <h1 style="color: white; margin: 0;">${alert.title}</h1>
+              <p style="color: white; margin: 5px 0 0;">Severity: ${alert.severity.toUpperCase()}</p>
+            </div>
+            <div style="padding: 20px; border: 1px solid #ddd; border-top: none;">
+              <p style="font-size: 16px; line-height: 1.5;">${alert.message}</p>
+              <p style="font-size: 14px; color: #777;">
+                This is an automated emergency alert. Please follow all instructions carefully.
+              </p>
+            </div>
+          </div>
+        `
+      };
+      
+      await sgMail.send(msg);
+      return { success: true, provider: 'sendgrid' };
+    } catch (error) {
+      console.error('SendGrid error:', error);
+      // Fall back to simulated sending
+      await simulateEmailSending();
+      return { success: true, provider: 'simulated', reason: 'SendGrid error: ' + error.message };
+    }
+  } else {
+    // Simulate sending email if SendGrid is not configured
+    await simulateEmailSending();
+    return { success: true, provider: 'simulated', reason: 'SendGrid not configured' };
+  }
+};
+
+/**
+ * Simulate sending an email with a delay
+ */
+const simulateEmailSending = async () => {
   await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // In a real app, we would use SendGrid or similar service
-  // Example code:
-  /*
-  const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'default_key');
-  
-  const msg = {
-    to: recipient.email,
-    from: 'alerts@emergency-system.com',
-    subject: `ALERT: ${alert.title}`,
-    text: alert.message,
-    html: `<h1>${alert.title}</h1><p>${alert.message}</p>`,
-  };
-  
-  await sgMail.send(msg);
-  */
-  
-  return { success: true };
 };
 
 /**
@@ -104,26 +163,34 @@ const sendSmsNotification = async (alert, recipient) => {
   
   console.log(`[SMS] Sending alert "${alert.title}" to ${recipient.phoneNumber}`);
   
-  // Simulate sending SMS with delay
+  // If Twilio is configured, use it to send the SMS
+  if (hasTwilioCredentials && twilioClient) {
+    try {
+      const message = await twilioClient.messages.create({
+        body: `ALERT [${alert.severity.toUpperCase()}]: ${alert.title} - ${alert.message}`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: recipient.phoneNumber
+      });
+      
+      return { success: true, provider: 'twilio', messageId: message.sid };
+    } catch (error) {
+      console.error('Twilio error:', error);
+      // Fall back to simulated sending
+      await simulateSmsSending();
+      return { success: true, provider: 'simulated', reason: 'Twilio error: ' + error.message };
+    }
+  } else {
+    // Simulate sending SMS if Twilio is not configured
+    await simulateSmsSending();
+    return { success: true, provider: 'simulated', reason: 'Twilio not configured' };
+  }
+};
+
+/**
+ * Simulate sending an SMS with a delay
+ */
+const simulateSmsSending = async () => {
   await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // In a real app, we would use Twilio or similar service
-  // Example code:
-  /*
-  const twilio = require('twilio');
-  const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID || 'default_sid',
-    process.env.TWILIO_AUTH_TOKEN || 'default_token'
-  );
-  
-  await client.messages.create({
-    body: `ALERT: ${alert.title} - ${alert.message}`,
-    from: process.env.TWILIO_PHONE_NUMBER || '+15551234567',
-    to: recipient.phoneNumber
-  });
-  */
-  
-  return { success: true };
 };
 
 /**
@@ -136,40 +203,30 @@ const sendPushNotification = async (alert, recipient) => {
   console.log(`[PUSH] Sending alert "${alert.title}" to user ${recipient.id}`);
   
   // Simulate sending push notification with delay
+  // In the future, this would use Firebase Cloud Messaging or a similar service
   await new Promise(resolve => setTimeout(resolve, 100));
   
-  // In a real app, we would use Firebase Cloud Messaging or similar service
-  // Example code:
-  /*
-  const admin = require('firebase-admin');
-  
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-      })
-    });
+  return { success: true, provider: 'simulated' };
+};
+
+/**
+ * Get color based on alert severity
+ * @param {string} severity - Alert severity
+ * @returns {string} Color hex code
+ */
+const getSeverityColor = (severity) => {
+  switch (severity.toLowerCase()) {
+    case 'critical':
+      return '#cc0000'; // Dark red
+    case 'high':
+      return '#ff4500'; // Orange-red
+    case 'medium':
+      return '#ffa500'; // Orange
+    case 'low':
+      return '#ffcc00'; // Amber
+    default:
+      return '#999999'; // Gray
   }
-  
-  // We would need to store FCM tokens for each user
-  const fcmToken = await getUserFcmToken(recipient.id);
-  
-  await admin.messaging().send({
-    token: fcmToken,
-    notification: {
-      title: alert.title,
-      body: alert.message
-    },
-    data: {
-      alertId: alert.id.toString(),
-      severity: alert.severity
-    }
-  });
-  */
-  
-  return { success: true };
 };
 
 module.exports = {

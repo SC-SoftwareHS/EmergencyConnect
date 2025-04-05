@@ -1,20 +1,23 @@
 /**
  * In-memory database for the emergency alert system
- * Provides CRUD operations for users, alerts, and subscriptions
+ * Provides CRUD operations for users, alerts, subscriptions, and incidents
  */
 const User = require('../models/User');
 const Alert = require('../models/Alert');
 const Subscription = require('../models/Subscription');
+const Incident = require('../models/Incident');
 
 // In-memory database
 const db = {
   users: [],
   alerts: [],
   subscriptions: [],
+  incidents: [],
   idCounters: {
     users: 0,
     alerts: 0,
-    subscriptions: 0
+    subscriptions: 0,
+    incidents: 0
   }
 };
 
@@ -284,9 +287,96 @@ const subscriptionDB = {
   }
 };
 
+/**
+ * Incident-related database operations
+ */
+const incidentDB = {
+  create: (incidentData) => {
+    const id = ++db.idCounters.incidents;
+    const incident = new Incident(
+      id,
+      incidentData.title,
+      incidentData.description,
+      incidentData.location,
+      incidentData.severity,
+      incidentData.reportedBy,
+      incidentData.attachments || [],
+      incidentData.relatedAlertId || null
+    );
+    db.incidents.push(incident);
+    return incident;
+  },
+  
+  findById: (id) => {
+    return db.incidents.find(incident => incident.id === id);
+  },
+  
+  update: (id, updates) => {
+    const incident = incidentDB.findById(id);
+    if (incident) {
+      Object.assign(incident, updates);
+      incident.updatedAt = new Date();
+      return incident;
+    }
+    return null;
+  },
+  
+  updateStatus: (id, status, userId, notes = '') => {
+    const incident = incidentDB.findById(id);
+    if (incident) {
+      incident.updateStatus(status, userId, notes);
+      return incident;
+    }
+    return null;
+  },
+  
+  addResponse: (id, action, userId, notes = '') => {
+    const incident = incidentDB.findById(id);
+    if (incident) {
+      incident.addResponse(action, userId, notes);
+      return incident;
+    }
+    return null;
+  },
+  
+  delete: (id) => {
+    const index = db.incidents.findIndex(incident => incident.id === id);
+    if (index !== -1) {
+      db.incidents.splice(index, 1);
+      return true;
+    }
+    return false;
+  },
+  
+  getAll: () => {
+    return [...db.incidents];
+  },
+  
+  getAllByStatus: (status) => {
+    return db.incidents.filter(incident => incident.status === status);
+  },
+  
+  getAllByReporter: (userId) => {
+    return db.incidents.filter(incident => incident.reportedBy === userId);
+  },
+  
+  getAllByLocation: (location) => {
+    return db.incidents.filter(incident => 
+      incident.location && incident.location.toLowerCase().includes(location.toLowerCase())
+    );
+  },
+  
+  getRecentIncidents: (limit = 10) => {
+    return [...db.incidents]
+      .sort((a, b) => b.reportedAt - a.reportedAt)
+      .slice(0, limit);
+  }
+};
+
 module.exports = {
   initializeDatabase,
   userDB,
   alertDB,
-  subscriptionDB
+  subscriptionDB,
+  incidentDB
 };
