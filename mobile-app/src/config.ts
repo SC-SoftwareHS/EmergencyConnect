@@ -4,7 +4,9 @@ import Constants from 'expo-constants';
 // For Expo Go, you can use your computer's local network IP address
 // For example: 'http://192.168.1.100:5000'
 // For production, use your deployed server URL
-const DEFAULT_API_URL = 'http://localhost:5000';
+// If you've deployed on Replit, use your Replit URL:
+// https://your-repl-name.replit.app
+const DEFAULT_API_URL = 'https://emergency-alert-system.replit.app';
 
 // Function to get the API URL from environment variables or use default
 export const getApiUrl = (): string => {
