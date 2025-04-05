@@ -108,7 +108,7 @@ const sendEmailNotification = async (alert, recipient) => {
     try {
       const msg = {
         to: recipient.email,
-        from: 'alerts@emergency-system.com', // Use a verified sender in SendGrid
+        from: 'test@sendgrid.net', // Use a verified sender in SendGrid
         subject: `ALERT: ${alert.title}`,
         text: alert.message,
         html: `
