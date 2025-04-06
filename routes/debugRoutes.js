@@ -55,6 +55,82 @@ router.get('/users', (req, res) => {
 });
 
 /**
+ * @route GET /api/debug/network-test
+ * @desc Test network connectivity with various response types
+ * @access Public (for testing)
+ */
+router.get('/network-test', (req, res) => {
+  // Get query parameters
+  const { size = 'small', delay = 0, type = 'json' } = req.query;
+  
+  // Apply artificial delay if requested (for testing slow connections)
+  if (delay > 0 && delay <= 10000) {
+    setTimeout(() => sendNetworkTestResponse(req, res, size, type), parseInt(delay));
+  } else {
+    sendNetworkTestResponse(req, res, size, type);
+  }
+});
+
+// Helper function to send different response types and sizes
+function sendNetworkTestResponse(req, res, size, type) {
+  // Create a response payload based on requested size
+  let payload = { success: true, timestamp: new Date().toISOString() };
+  
+  if (size === 'medium') {
+    // Medium payload - around 10KB
+    payload.data = Array(100).fill().map((_, i) => ({ 
+      id: i, 
+      value: `Test data item ${i}`,
+      details: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
+    }));
+  } else if (size === 'large') {
+    // Large payload - around 100KB
+    payload.data = Array(1000).fill().map((_, i) => ({ 
+      id: i, 
+      value: `Test data item ${i}`,
+      details: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ' + 
+               'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+      extraData: Array(10).fill().map((_, j) => ({ subId: j, value: `Sub item ${j}` }))
+    }));
+  } else {
+    // Small payload (default) - minimal
+    payload.data = { message: 'Small test payload' };
+  }
+  
+  // Send response in requested format
+  if (type === 'xml') {
+    res.set('Content-Type', 'application/xml');
+    
+    // Very simple XML conversion (only for testing, not a proper XML converter)
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n';
+    xml += `  <success>${payload.success}</success>\n`;
+    xml += `  <timestamp>${payload.timestamp}</timestamp>\n`;
+    xml += '  <data>\n';
+    
+    if (Array.isArray(payload.data)) {
+      payload.data.forEach((item, index) => {
+        xml += `    <item id="${item.id}">\n`;
+        xml += `      <value>${item.value}</value>\n`;
+        xml += `      <details>${item.details}</details>\n`;
+        xml += '    </item>\n';
+      });
+    } else {
+      xml += `    <message>${payload.data.message}</message>\n`;
+    }
+    
+    xml += '  </data>\n</response>';
+    
+    res.send(xml);
+  } else if (type === 'text') {
+    res.set('Content-Type', 'text/plain');
+    res.send(`Success: ${payload.success}\nTimestamp: ${payload.timestamp}\nData: ${JSON.stringify(payload.data)}`);
+  } else {
+    // Default: JSON
+    res.json(payload);
+  }
+}
+
+/**
  * @route POST /api/debug/direct-token
  * @desc Get a direct token for a test user (development only)
  * @access Public (for testing)
@@ -96,6 +172,36 @@ router.post('/direct-token', async (req, res) => {
       error: error.message
     });
   }
+});
+
+/**
+ * @route ALL /api/debug/cors-test
+ * @desc Test CORS with different HTTP methods
+ * @access Public (for testing)
+ */
+router.all('/cors-test', (req, res) => {
+  // Explicitly set CORS headers for testing
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  // For all other requests, return info about the request
+  const response = {
+    success: true,
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+    query: req.query,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  };
+  
+  res.json(response);
 });
 
 module.exports = router;

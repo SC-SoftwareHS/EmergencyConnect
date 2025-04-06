@@ -119,23 +119,139 @@ export const getDirectToken = async (username: string): Promise<boolean> => {
 };
 
 /**
+ * Test connectivity with different methods to troubleshoot network issues
+ */
+export const testConnectivity = async (url: string): Promise<{
+  axiosSuccess: boolean;
+  fetchSuccess: boolean;
+  xmlHttpSuccess: boolean;
+  responseTime: number | null;
+  error: string | null;
+}> => {
+  const result = {
+    axiosSuccess: false,
+    fetchSuccess: false,
+    xmlHttpSuccess: false,
+    responseTime: null,
+    error: null
+  };
+  
+  // Test with axios
+  try {
+    const startTime = Date.now();
+    await axios.get(`${url}/api/debug/status`, { 
+      timeout: 10000,
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    result.axiosSuccess = true;
+    result.responseTime = Date.now() - startTime;
+  } catch (error) {
+    console.log('Axios connectivity test failed:', error.message);
+  }
+  
+  // Test with fetch API
+  try {
+    const startTime = Date.now();
+    const response = await fetch(`${url}/api/debug/status`, {
+      method: 'GET',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (response.ok) {
+      result.fetchSuccess = true;
+      if (!result.responseTime) {
+        result.responseTime = Date.now() - startTime;
+      }
+    }
+  } catch (error) {
+    console.log('Fetch API connectivity test failed:', error.message);
+  }
+  
+  // Test with XMLHttpRequest (lower level)
+  return new Promise((resolve) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            result.xmlHttpSuccess = true;
+            if (!result.responseTime) {
+              result.responseTime = Date.now() - startTime;
+            }
+          }
+          resolve(result);
+        }
+      };
+      
+      xhr.onerror = function() {
+        result.error = 'XMLHttpRequest failed';
+        resolve(result);
+      };
+      
+      xhr.ontimeout = function() {
+        result.error = 'XMLHttpRequest timed out';
+        resolve(result);
+      };
+      
+      xhr.open('GET', `${url}/api/debug/status`, true);
+      xhr.timeout = 10000;
+      xhr.setRequestHeader('Cache-Control', 'no-cache');
+      xhr.send();
+    } catch (error) {
+      result.error = `XMLHttpRequest exception: ${error.message}`;
+      resolve(result);
+    }
+  });
+};
+
+/**
  * Main debug function - perform various checks
  */
 export const runDiagnostics = async (): Promise<{
   serverOnline: boolean;
   authWorks: boolean;
   tokenValid: boolean;
+  networkConnectivity: {
+    axiosSuccess: boolean;
+    fetchSuccess: boolean;
+    xmlHttpSuccess: boolean;
+    responseTime: number | null;
+  };
   errorMessages: string[];
 }> => {
   const results = {
     serverOnline: false,
     authWorks: false,
     tokenValid: false,
+    networkConnectivity: {
+      axiosSuccess: false,
+      fetchSuccess: false,
+      xmlHttpSuccess: false,
+      responseTime: null
+    },
     errorMessages: []
   };
   
   try {
+    // First test basic connectivity
+    console.log('Testing basic network connectivity...');
+    const connectivityResults = await testConnectivity(API_CONFIG.baseURL);
+    results.networkConnectivity = {
+      axiosSuccess: connectivityResults.axiosSuccess,
+      fetchSuccess: connectivityResults.fetchSuccess,
+      xmlHttpSuccess: connectivityResults.xmlHttpSuccess,
+      responseTime: connectivityResults.responseTime
+    };
+    
+    if (!connectivityResults.axiosSuccess && 
+        !connectivityResults.fetchSuccess && 
+        !connectivityResults.xmlHttpSuccess) {
+      results.errorMessages.push('Network connectivity failed with all methods');
+    }
+    
     // Check server status
+    console.log('Checking server status...');
     const status = await getServerStatus();
     if (status && status.success) {
       results.serverOnline = true;
@@ -145,6 +261,7 @@ export const runDiagnostics = async (): Promise<{
     
     // Try to get a direct token for admin user
     if (results.serverOnline) {
+      console.log('Testing authentication...');
       const gotToken = await getDirectToken('admin');
       if (gotToken) {
         results.authWorks = true;
@@ -158,6 +275,7 @@ export const runDiagnostics = async (): Promise<{
     if (storedToken) {
       try {
         // Make a simple request that requires authentication
+        console.log('Verifying token validity...');
         const response = await axios.get(`${API_CONFIG.baseURL}/api/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${storedToken}`
@@ -185,5 +303,6 @@ export default {
   getServerStatus,
   getTestUsers,
   getDirectToken,
-  runDiagnostics
+  runDiagnostics,
+  testConnectivity
 };

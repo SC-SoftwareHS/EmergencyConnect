@@ -13,7 +13,13 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../config';
+import { 
+  COLORS, 
+  getApiUrl, 
+  setCustomApiUrl, 
+  useLocalApi, 
+  useReplitApi 
+} from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import debugService from '../services/debugService';
@@ -25,9 +31,17 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [serverUrl, setServerUrl] = useState('http://workspace.graftssalable0o.replit.app');
+  const [serverUrl, setServerUrl] = useState(getApiUrl());
   const [serverStatus, setServerStatus] = useState<any>(null);
   const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
+  const [connectionMethod, setConnectionMethod] = useState<'standard' | 'direct' | 'fetch'>('standard');
+  const [connectionSuccess, setConnectionSuccess] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  
+  // Update API config when server URL changes
+  useEffect(() => {
+    setCustomApiUrl(serverUrl);
+  }, [serverUrl]);
   
   // Load server status on mount
   useEffect(() => {
@@ -39,11 +53,15 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
         
         if (status && status.success) {
           setErrorMessage('');
+          setConnectionSuccess(true);
         } else {
           setErrorMessage('Server not reachable. Please check the URL.');
+          setConnectionSuccess(false);
         }
       } catch (error) {
+        console.error('Server check error:', error);
         setErrorMessage('Failed to connect to server.');
+        setConnectionSuccess(false);
       } finally {
         setDiagnosticsRunning(false);
       }
@@ -183,6 +201,87 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
               autoCorrect={false}
               editable={!isLoading}
             />
+            <View style={styles.urlButtonsContainer}>
+              <TouchableOpacity 
+                style={[styles.urlButton, serverUrl === 'http://localhost:5000' && styles.urlButtonActive]} 
+                onPress={() => {
+                  setServerUrl('http://localhost:5000');
+                  useLocalApi();
+                }}
+              >
+                <Text style={styles.urlButtonText}>Local</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.urlButton, serverUrl === 'http://10.0.2.2:5000' && styles.urlButtonActive]} 
+                onPress={() => {
+                  // Android emulator uses 10.0.2.2 to access host machine localhost
+                  setServerUrl('http://10.0.2.2:5000');
+                  setCustomApiUrl('http://10.0.2.2:5000');
+                }}
+              >
+                <Text style={styles.urlButtonText}>Android</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.urlButton, serverUrl === 'http://workspace.graftssalable0o.replit.app' && styles.urlButtonActive]} 
+                onPress={() => {
+                  setServerUrl('http://workspace.graftssalable0o.replit.app');
+                  useReplitApi();
+                }}
+              >
+                <Text style={styles.urlButtonText}>Replit</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.connectionStatusContainer}>
+              {serverStatus ? (
+                <Text style={[styles.connectionStatusText, connectionSuccess ? styles.successText : styles.errorText]}>
+                  {connectionSuccess ? 'Connected' : 'Connection failed'}
+                </Text>
+              ) : (
+                <Text style={styles.connectionStatusText}>Checking connection...</Text>
+              )}
+              <TouchableOpacity 
+                style={[styles.connectivityButton, diagnosticsRunning && styles.buttonDisabled]}
+                onPress={async () => {
+                  setDiagnosticsRunning(true);
+                  setErrorMessage('');
+                  try {
+                    const results = await debugService.testConnectivity(serverUrl);
+                    console.log('Connectivity test results:', results);
+                    
+                    let message = 'Connectivity Test Results:\n';
+                    message += `• Axios: ${results.axiosSuccess ? '✓' : '✗'}\n`;
+                    message += `• Fetch: ${results.fetchSuccess ? '✓' : '✗'}\n`;
+                    message += `• XMLHttpRequest: ${results.xmlHttpSuccess ? '✓' : '✗'}\n`;
+                    
+                    if (results.responseTime) {
+                      message += `\nResponse Time: ${results.responseTime}ms`;
+                    }
+                    
+                    Alert.alert('Connectivity Test', message);
+                    
+                    if (!results.axiosSuccess && !results.fetchSuccess && !results.xmlHttpSuccess) {
+                      setErrorMessage('All connectivity methods failed. Please check your network connection and server URL.');
+                    } else if (results.axiosSuccess || results.fetchSuccess || results.xmlHttpSuccess) {
+                      // Refresh server status
+                      const status = await debugService.getServerStatus();
+                      setServerStatus(status);
+                      if (status && status.success) {
+                        setConnectionSuccess(true);
+                        setErrorMessage('');
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Connectivity test error:', error);
+                    setErrorMessage('Failed to run connectivity test: ' + error.message);
+                  } finally {
+                    setDiagnosticsRunning(false);
+                  }
+                }}
+                disabled={diagnosticsRunning}
+              >
+                <Text style={styles.connectivityButtonText}>Test Connectivity</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.inputContainer}>
@@ -434,6 +533,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     textAlign: 'center',
+  },
+  // URL selection buttons
+  urlButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  urlButton: {
+    flex: 1,
+    padding: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+    marginHorizontal: 2,
+    alignItems: 'center',
+  },
+  urlButtonActive: {
+    backgroundColor: COLORS.success + '30', // 30% opacity
+    borderWidth: 1,
+    borderColor: COLORS.success,
+  },
+  urlButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Connection status
+  connectionStatusContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  connectionStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  successText: {
+    color: COLORS.success,
+  },
+  connectivityButton: {
+    backgroundColor: COLORS.info + '20',
+    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: COLORS.info,
+  },
+  connectivityButtonText: {
+    fontSize: 12,
+    color: COLORS.info,
+    fontWeight: '500',
   },
 });
 

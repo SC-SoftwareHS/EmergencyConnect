@@ -1,26 +1,40 @@
-// Default API URL - replace with your server URL when testing
+// API URL Configuration
 // For Expo Go, you can use your computer's local network IP address
 // For example: 'http://192.168.1.100:5000'
 // For production, use your deployed server URL
-// If you've deployed on Replit, use your Replit URL:
-// https://your-repl-name.replit.app
 
-// Directly use the Replit URL without any redirection
-// Fix: removed https: protocol which might be causing issues with certificate validation
-const DEFAULT_API_URL = 'http://workspace.graftssalable0o.replit.app';
+// Replit URL for production
+const REPLIT_API_URL = 'http://workspace.graftssalable0o.replit.app';
 
 // Fallback local URL for testing
 const LOCAL_API_URL = 'http://localhost:5000';
 
-// Function to get the API URL from environment variables or use default
+// Variable to store the current API URL
+let CURRENT_API_URL = REPLIT_API_URL;
+
+// Function to get the currently set API URL
 export const getApiUrl = (): string => {
-  console.log('Using server URL:', DEFAULT_API_URL);
-  return DEFAULT_API_URL;
+  console.log('Using server URL:', CURRENT_API_URL);
+  return CURRENT_API_URL;
 };
 
-// For testing, allow manually switching to local development
+// Set API URL to local dev environment
 export const useLocalApi = (): void => {
-  console.log('Switching to local API:', LOCAL_API_URL);
+  CURRENT_API_URL = LOCAL_API_URL;
+  console.log('Switched to local API:', CURRENT_API_URL);
+};
+
+// Set API URL to Replit environment
+export const useReplitApi = (): void => {
+  CURRENT_API_URL = REPLIT_API_URL;
+  console.log('Switched to Replit API:', CURRENT_API_URL);
+};
+
+// Set API URL to a custom endpoint
+export const setCustomApiUrl = (url: string): void => {
+  if (!url) return;
+  CURRENT_API_URL = url;
+  console.log('Set custom API URL:', CURRENT_API_URL);
 };
 
 // API configuration object
