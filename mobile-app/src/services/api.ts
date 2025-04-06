@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, AUTH_CONFIG } from '../config';
-import { ApiResponse, LoginCredentials, User, Alert } from '../types';
+import { ApiResponse, LoginCredentials, User, Alert, Incident } from '../types';
 
 // Function to get the current auth token from storage
 export const getAuthToken = async (): Promise<string | null> => {
@@ -174,6 +174,93 @@ export const alertsApi = {
       return { 
         success: false, 
         error: error.response?.data?.error || 'Failed to acknowledge alert.' 
+      };
+    }
+  },
+};
+
+// Incidents API calls
+export const incidentsApi = {
+  // Get all incidents
+  getIncidents: async (): Promise<ApiResponse<Incident[]>> => {
+    try {
+      const response: AxiosResponse = await api.get('/api/incidents');
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to fetch incidents.',
+        data: undefined
+      };
+    }
+  },
+
+  // Get a single incident by ID
+  getIncidentById: async (incidentId: string): Promise<ApiResponse<Incident>> => {
+    try {
+      const response: AxiosResponse = await api.get(`/api/incidents/${incidentId}`);
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to fetch incident details.',
+        data: undefined
+      };
+    }
+  },
+
+  // Create a new incident
+  createIncident: async (incidentData: Partial<Incident>): Promise<ApiResponse<Incident>> => {
+    try {
+      const response: AxiosResponse = await api.post('/api/incidents', incidentData);
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to create incident.',
+        data: undefined
+      };
+    }
+  },
+
+  // Add a response to an incident
+  addResponse: async (incidentId: string, responseData: any): Promise<ApiResponse<Incident>> => {
+    try {
+      const response: AxiosResponse = await api.post(`/api/incidents/${incidentId}/responses`, responseData);
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to add response to incident.',
+        data: undefined
+      };
+    }
+  },
+
+  // Update incident status
+  updateStatus: async (incidentId: string, statusUpdate: any): Promise<ApiResponse<Incident>> => {
+    try {
+      const response: AxiosResponse = await api.put(`/api/incidents/${incidentId}/status`, statusUpdate);
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to update incident status.',
+        data: undefined
+      };
+    }
+  },
+
+  // Create an alert from an incident
+  createAlert: async (incidentId: string, alertData: any): Promise<ApiResponse<{ alertId: string }>> => {
+    try {
+      const response: AxiosResponse = await api.post(`/api/incidents/${incidentId}/alert`, alertData);
+      return { success: true, data: response.data, error: undefined };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Failed to create alert from incident.',
+        data: undefined
       };
     }
   },

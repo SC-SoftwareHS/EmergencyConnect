@@ -13,6 +13,11 @@ import SimplifiedLoginScreen from './src/screens/SimplifiedLoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertsScreen from './src/screens/AlertsScreen';
 import AlertDetailScreen from './src/screens/AlertDetailScreen';
+import IncidentsScreen from './src/screens/IncidentsScreen';
+import IncidentDetailScreen from './src/screens/IncidentDetailScreen';
+import IncidentReportScreen from './src/screens/IncidentReportScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 // Import types and config
 import { COLORS, AUTH_CONFIG } from './src/config';
@@ -34,8 +39,12 @@ const MainTabs = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Alerts') {
             iconName = focused ? 'warning' : 'warning-outline';
+          } else if (route.name === 'Incidents') {
+            iconName = focused ? 'alert-circle' : 'alert-circle-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Settings') {
+            iconName = focused ? 'settings' : 'settings-outline';
           } else {
             iconName = 'apps-outline';
           }
@@ -55,6 +64,9 @@ const MainTabs = () => {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Alerts" component={AlertsScreen} />
+      <Tab.Screen name="Incidents" component={IncidentsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 };
@@ -116,6 +128,36 @@ export default function App() {
                 options={{ 
                   headerShown: true, 
                   title: 'Alert Details',
+                  headerStyle: {
+                    backgroundColor: COLORS.primary,
+                  },
+                  headerTintColor: COLORS.white,
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  }
+                }} 
+              />
+              <Stack.Screen 
+                name="IncidentDetail" 
+                component={IncidentDetailScreen} 
+                options={{ 
+                  headerShown: true, 
+                  title: 'Incident Details',
+                  headerStyle: {
+                    backgroundColor: COLORS.primary,
+                  },
+                  headerTintColor: COLORS.white,
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  }
+                }} 
+              />
+              <Stack.Screen 
+                name="IncidentReport" 
+                component={IncidentReportScreen} 
+                options={{ 
+                  headerShown: true, 
+                  title: 'Report Incident',
                   headerStyle: {
                     backgroundColor: COLORS.primary,
                   },

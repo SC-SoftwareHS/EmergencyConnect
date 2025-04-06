@@ -75,6 +75,7 @@ export const COLORS = {
   text: '#212529',
   border: '#dee2e6',
   notification: '#cc0000',
+  muted: '#6c757d', // Muted gray
   
   // Severity colors
   critical: '#cc0000', // Dark red

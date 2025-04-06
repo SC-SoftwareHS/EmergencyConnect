@@ -14,14 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../config';
-import { Alert, User } from '../types';
-import { alertsApi } from '../services/api';
+import { Incident, User } from '../types';
+import { incidentsApi } from '../services/api';
 
-const AlertsScreen = () => {
+const IncidentsScreen = () => {
   const navigation = useNavigation();
   
   const [user, setUser] = useState<User | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,24 +43,24 @@ const AlertsScreen = () => {
     loadUser();
   }, []);
   
-  // Fetch alerts
-  const fetchAlerts = async () => {
+  // Fetch incidents
+  const fetchIncidents = async () => {
     try {
       setError(null);
-      const response = await alertsApi.getAlerts();
+      const response = await incidentsApi.getIncidents();
       
       if (response.success && response.data) {
-        // Sort by createdAt (most recent first)
-        const sortedAlerts = response.data.sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        // Sort by reportedAt (most recent first)
+        const sortedIncidents = response.data.sort((a, b) => 
+          new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()
         );
         
-        setAlerts(sortedAlerts);
+        setIncidents(sortedIncidents);
       } else {
-        setError(response.error || 'Failed to fetch alerts');
+        setError(response.error || 'Failed to fetch incidents');
       }
     } catch (error) {
-      console.error('Error fetching alerts:', error);
+      console.error('Error fetching incidents:', error);
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
@@ -70,28 +70,29 @@ const AlertsScreen = () => {
   
   // Initial fetch
   useEffect(() => {
-    fetchAlerts();
+    fetchIncidents();
   }, []);
   
   // Handle pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchAlerts();
+    await fetchIncidents();
   };
   
-  // Filtered alerts based on active filter
-  const filteredAlerts = React.useMemo(() => {
-    if (!activeFilter) return alerts;
-    return alerts.filter(alert => alert.status === activeFilter);
-  }, [alerts, activeFilter]);
+  // Filtered incidents based on active filter
+  const filteredIncidents = React.useMemo(() => {
+    if (!activeFilter) return incidents;
+    return incidents.filter(incident => incident.status === activeFilter);
+  }, [incidents, activeFilter]);
   
   // Filter buttons
   const renderFilterButtons = () => {
     const filters = [
       { id: null, label: 'All' },
-      { id: 'active', label: 'Active' },
+      { id: 'reported', label: 'Reported' },
+      { id: 'investigating', label: 'Investigating' },
       { id: 'resolved', label: 'Resolved' },
-      { id: 'cancelled', label: 'Cancelled' }
+      { id: 'closed', label: 'Closed' }
     ];
     
     return (
@@ -125,78 +126,34 @@ const AlertsScreen = () => {
     );
   };
   
-  // Render a single alert item
-  const renderAlertItem = ({ item }: { item: Alert }) => {
-    const hasUserAcknowledged = item.acknowledgments?.some(
-      ack => user && ack.userId === user.id
-    );
-    
+  // Render a single incident item
+  const renderIncidentItem = ({ item }: { item: Incident }) => {
     return (
       <TouchableOpacity
-        style={[
-          styles.alertCard,
-          { backgroundColor: hasUserAcknowledged ? '#f8f9fa' : '#fff' }
-        ]}
-        onPress={() => navigation.navigate('AlertDetail' as never, { alertId: item.id } as never)}
+        style={styles.incidentCard}
+        onPress={() => navigation.navigate('IncidentDetail' as never, { incidentId: item.id } as never)}
       >
-        <View style={styles.alertHeader}>
+        <View style={styles.incidentHeader}>
           <View style={[styles.severityIndicator, { backgroundColor: getSeverityColor(item.severity) }]} />
-          <Text style={styles.alertTitle}>{item.title}</Text>
-          {item.status !== 'active' && (
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-              <Text style={styles.statusText}>{item.status}</Text>
-            </View>
-          )}
+          <Text style={styles.incidentTitle}>{item.title}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+            <Text style={styles.statusText}>{item.status}</Text>
+          </View>
         </View>
         
-        <Text style={styles.alertMessage} numberOfLines={2}>
-          {item.message}
+        <Text style={styles.incidentDescription} numberOfLines={2}>
+          {item.description}
         </Text>
         
-        <View style={styles.alertFooter}>
-          <Text style={styles.alertTimestamp}>
-            {new Date(item.createdAt).toLocaleString()}
+        <View style={styles.incidentFooter}>
+          <Text style={styles.incidentTimestamp}>
+            {new Date(item.reportedAt).toLocaleString()}
           </Text>
           
-          {item.status === 'active' && (
-            hasUserAcknowledged ? (
-              <View style={styles.acknowledgedBadge}>
-                <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-                <Text style={styles.acknowledgedText}>Acknowledged</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.acknowledgeButton}
-                onPress={async (e) => {
-                  e.stopPropagation(); // Prevent navigation to detail
-                  try {
-                    const response = await alertsApi.acknowledgeAlert(item.id);
-                    if (response.success) {
-                      // Update local state to show acknowledgment
-                      setAlerts(
-                        alerts.map(a => {
-                          if (a.id === item.id && user) {
-                            return {
-                              ...a,
-                              acknowledgments: [
-                                ...(a.acknowledgments || []),
-                                { userId: user.id, timestamp: new Date().toISOString() }
-                              ]
-                            };
-                          }
-                          return a;
-                        })
-                      );
-                    }
-                  } catch (error) {
-                    console.error('Error acknowledging alert:', error);
-                  }
-                }}
-              >
-                <Text style={styles.acknowledgeButtonText}>Acknowledge</Text>
-              </TouchableOpacity>
-            )
-          )}
+          <View style={styles.incidentMeta}>
+            <Ionicons name="location" size={12} color="#666" />
+            <Text style={styles.locationText}>{item.location}</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -216,10 +173,11 @@ const AlertsScreen = () => {
   // Helper to get color based on status
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return COLORS.primary;
+      case 'reported': return COLORS.warning;
+      case 'investigating': return COLORS.info;
       case 'resolved': return COLORS.success;
-      case 'cancelled': return COLORS.warning;
-      case 'expired': return COLORS.dark;
+      case 'closed': return COLORS.dark;
+      case 'cancelled': return COLORS.muted;
       default: return COLORS.info;
     }
   };
@@ -236,23 +194,32 @@ const AlertsScreen = () => {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={40} color={COLORS.danger} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchAlerts}>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchIncidents}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : filteredAlerts.length === 0 ? (
+      ) : filteredIncidents.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="information-circle" size={40} color={COLORS.info} />
           <Text style={styles.emptyText}>
             {activeFilter 
-              ? `No ${activeFilter} alerts found` 
-              : 'No alerts found'}
+              ? `No ${activeFilter} incidents found` 
+              : 'No incidents found'}
           </Text>
+          
+          {user && (user.role === 'admin' || user.role === 'operator') && (
+            <TouchableOpacity 
+              style={styles.reportButton}
+              onPress={() => navigation.navigate('IncidentReport' as never)}
+            >
+              <Text style={styles.reportButtonText}>Report New Incident</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
-          data={filteredAlerts}
-          renderItem={renderAlertItem}
+          data={filteredIncidents}
+          renderItem={renderIncidentItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContainer}
           refreshControl={
@@ -263,6 +230,16 @@ const AlertsScreen = () => {
               tintColor={COLORS.primary}
             />
           }
+          ListFooterComponent={() => (
+            user && (user.role === 'admin' || user.role === 'operator') ? (
+              <TouchableOpacity 
+                style={styles.floatingActionButton}
+                onPress={() => navigation.navigate('IncidentReport' as never)}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            ) : null
+          )}
         />
       )}
     </SafeAreaView>
@@ -308,6 +285,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
+    paddingBottom: 80, // Space for the FAB
   },
   loaderContainer: {
     flex: 1,
@@ -348,8 +326,20 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 10,
+    marginBottom: 20,
   },
-  alertCard: {
+  reportButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  reportButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+  },
+  incidentCard: {
     backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
@@ -360,7 +350,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  alertHeader: {
+  incidentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
@@ -371,7 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginRight: 8,
   },
-  alertTitle: {
+  incidentTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
@@ -389,41 +379,45 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
-  alertMessage: {
+  incidentDescription: {
     fontSize: 14,
     color: '#666',
     marginBottom: 12,
   },
-  alertFooter: {
+  incidentFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  alertTimestamp: {
+  incidentTimestamp: {
     fontSize: 12,
     color: '#999',
   },
-  acknowledgeButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-  },
-  acknowledgeButtonText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  acknowledgedBadge: {
+  incidentMeta: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  acknowledgedText: {
+  locationText: {
     fontSize: 12,
-    color: COLORS.success,
-    fontWeight: 'bold',
+    color: '#666',
     marginLeft: 4,
+  },
+  floatingActionButton: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });
 
-export default AlertsScreen;
+export default IncidentsScreen;
