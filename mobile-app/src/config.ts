@@ -4,7 +4,7 @@
 // For production, use your deployed server URL
 
 // Replit URL for production
-const REPLIT_API_URL = 'http://workspace.graftssalable0o.replit.app';
+const REPLIT_API_URL = 'https://emergency-connect.replit.app';
 
 // Fallback local URL for testing
 const LOCAL_API_URL = 'http://localhost:5000';

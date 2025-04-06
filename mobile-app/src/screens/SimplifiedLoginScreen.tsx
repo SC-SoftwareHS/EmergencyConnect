@@ -222,9 +222,9 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
                 <Text style={styles.urlButtonText}>Android</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.urlButton, serverUrl === 'http://workspace.graftssalable0o.replit.app' && styles.urlButtonActive]} 
+                style={[styles.urlButton, serverUrl === 'https://emergency-connect.replit.app' && styles.urlButtonActive]} 
                 onPress={() => {
-                  setServerUrl('http://workspace.graftssalable0o.replit.app');
+                  setServerUrl('https://emergency-connect.replit.app');
                   useReplitApi();
                 }}
               >
