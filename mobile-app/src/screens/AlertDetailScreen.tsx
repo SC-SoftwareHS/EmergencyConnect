@@ -1,52 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  ScrollView,
   ActivityIndicator,
-  Alert,
+  Alert as RNAlert,
+  Share,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, Alert as AlertType } from '../types';
-import { alertsApi } from '../services/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../config';
-import { onAlertUpdate } from '../services/socket';
-
-// Define route and navigation types
-type AlertDetailRouteProp = RouteProp<RootStackParamList, 'AlertDetail'>;
-type AlertDetailNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'AlertDetail'
->;
+import { Alert, User } from '../types';
+import { alertsApi } from '../services/api';
 
 const AlertDetailScreen = () => {
-  const route = useRoute<AlertDetailRouteProp>();
-  const navigation = useNavigation<AlertDetailNavigationProp>();
-  const { alertId } = route.params;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { alertId } = route.params as { alertId: string };
   
-  const [alert, setAlert] = useState<AlertType | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [alert, setAlert] = useState<Alert | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Update alert when socket emits update
-  const handleAlertUpdate = (updatedAlert: AlertType) => {
-    if (updatedAlert.id === alertId) {
-      setAlert(updatedAlert);
-    }
-  };
+  // Load user from storage
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userString = await AsyncStorage.getItem('emergencyAlertUser');
+        if (userString) {
+          setUser(JSON.parse(userString));
+        }
+      } catch (error) {
+        console.error('Error loading user from storage:', error);
+      }
+    };
+    
+    loadUser();
+  }, []);
   
-  // Fetch alert details from API
+  // Fetch alert details
   const fetchAlertDetails = async () => {
     try {
-      setIsLoading(true);
       setError(null);
-      
       const response = await alertsApi.getAlertById(alertId);
       
       if (response.success && response.data) {
@@ -54,239 +54,236 @@ const AlertDetailScreen = () => {
       } else {
         setError(response.error || 'Failed to fetch alert details');
       }
-    } catch (error: any) {
-      setError(error.message || 'An unexpected error occurred');
+    } catch (error) {
+      console.error('Error fetching alert details:', error);
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Handle alert acknowledgment
-  const acknowledgeAlert = async () => {
-    try {
-      setIsAcknowledging(true);
-      
-      const response = await alertsApi.acknowledgeAlert(alertId);
-      
-      if (response.success && response.data) {
-        setAlert(response.data);
-        Alert.alert('Success', 'Alert has been acknowledged');
-      } else {
-        Alert.alert('Error', response.error || 'Failed to acknowledge alert');
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
-    } finally {
-      setIsAcknowledging(false);
-    }
-  };
-  
-  // Handle acknowledgment button press
-  const handleAcknowledge = () => {
-    if (!alert || alert.acknowledged) return;
-    
-    Alert.alert(
-      'Acknowledge Alert',
-      'Are you sure you want to acknowledge this alert?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Acknowledge', onPress: acknowledgeAlert },
-      ]
-    );
-  };
-  
-  // Set up effect for fetching and socket subscription
+  // Initial fetch
   useEffect(() => {
-    // Add listener for alert updates
-    onAlertUpdate(handleAlertUpdate);
-    
-    // Fetch initial alert details
     fetchAlertDetails();
-    
-    // Update header title
-    navigation.setOptions({
-      title: 'Alert Details',
-    });
-    
-    // Clean up on unmount
-    return () => {
-      // Note: Socket cleanup is handled in AuthContext
-    };
   }, [alertId]);
   
-  // Determine status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return COLORS.danger;
-      case 'resolved':
-        return COLORS.success;
-      case 'cancelled':
-        return COLORS.dark;
-      default:
-        return '#666666';
-    }
-  };
-  
-  // Determine severity color
+  // Helper to get color based on severity
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical':
-        return COLORS.critical;
-      case 'high':
-        return COLORS.high;
-      case 'medium':
-        return COLORS.medium;
-      case 'low':
-        return COLORS.low;
-      default:
-        return COLORS.dark;
+      case 'critical': return COLORS.critical;
+      case 'high': return COLORS.high;
+      case 'medium': return COLORS.medium;
+      case 'low': return COLORS.low;
+      default: return COLORS.medium;
     }
   };
   
-  // Format timestamp
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+  // Helper to get text based on severity
+  const getSeverityText = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'Critical';
+      case 'high': return 'High';
+      case 'medium': return 'Medium';
+      case 'low': return 'Low';
+      default: return 'Unknown';
+    }
+  };
+  
+  // Helper to get color based on status
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return COLORS.primary;
+      case 'resolved': return COLORS.success;
+      case 'cancelled': return COLORS.warning;
+      case 'expired': return COLORS.dark;
+      default: return COLORS.info;
+    }
+  };
+  
+  // Check if the current user has acknowledged this alert
+  const hasUserAcknowledged = alert?.acknowledgments?.some(
+    ack => user && ack.userId === user.id
+  );
+  
+  // Handle acknowledge action
+  const handleAcknowledge = async () => {
+    if (!alert || hasUserAcknowledged) return;
+    
+    try {
+      const response = await alertsApi.acknowledgeAlert(alert.id);
+      
+      if (response.success) {
+        // Update local state to show acknowledgment
+        setAlert(prevAlert => {
+          if (!prevAlert || !user) return prevAlert;
+          
+          return {
+            ...prevAlert,
+            acknowledgments: [
+              ...(prevAlert.acknowledgments || []),
+              { userId: user.id, timestamp: new Date().toISOString() }
+            ]
+          };
+        });
+        
+        RNAlert.alert('Success', 'Alert acknowledged successfully');
+      } else {
+        RNAlert.alert('Error', response.error || 'Failed to acknowledge alert');
+      }
+    } catch (error) {
+      console.error('Error acknowledging alert:', error);
+      RNAlert.alert('Error', 'Failed to acknowledge alert');
+    }
+  };
+  
+  // Handle share alert
+  const handleShare = async () => {
+    if (!alert) return;
+    
+    try {
+      const message = `Emergency Alert: ${alert.title}\n\n${alert.message}\n\nSeverity: ${getSeverityText(alert.severity)}\nStatus: ${alert.status}\nIssued: ${new Date(alert.createdAt).toLocaleString()}`;
+      
+      await Share.share({
+        message
+      });
+    } catch (error) {
+      console.error('Error sharing alert:', error);
+    }
   };
   
   if (isLoading) {
     return (
-      <View style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading alert details...</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
   
-  if (error) {
+  if (error || !alert) {
     return (
-      <View style={styles.centeredContainer}>
-        <Ionicons name="alert-circle" size={60} color={COLORS.danger} />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={fetchAlertDetails}
-        >
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-  
-  if (!alert) {
-    return (
-      <View style={styles.centeredContainer}>
-        <Ionicons name="warning" size={60} color={COLORS.warning} />
-        <Text style={styles.errorText}>Alert not found</Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={40} color={COLORS.danger} />
+          <Text style={styles.errorText}>{error || 'Alert not found'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchAlertDetails}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
   
   return (
-    <SafeAreaView style={styles.container} edges={['right', 'left', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Alert header */}
-        <View style={styles.headerContainer}>
-          <View
-            style={[
-              styles.severityIndicator,
-              { backgroundColor: getSeverityColor(alert.severity) },
-            ]}
-          />
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>{alert.title}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(alert.status) },
-              ]}
-            >
-              <Text style={styles.statusText}>{alert.status.toUpperCase()}</Text>
-            </View>
+        {/* Alert Header */}
+        <View style={styles.alertHeader}>
+          <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(alert.severity) }]}>
+            <Text style={styles.severityText}>{getSeverityText(alert.severity)}</Text>
+          </View>
+          
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(alert.status) }]}>
+            <Text style={styles.statusText}>{alert.status.toUpperCase()}</Text>
           </View>
         </View>
         
-        {/* Alert details */}
-        <View style={styles.detailsContainer}>
-          <Text style={styles.detailsTitle}>Alert Details</Text>
-          <Text style={styles.message}>{alert.message}</Text>
-          
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={20} color="#666666" />
-            <Text style={styles.infoText}>
-              Created: {formatDate(alert.createdAt)}
-            </Text>
+        {/* Alert Title and Content */}
+        <Text style={styles.alertTitle}>{alert.title}</Text>
+        
+        <Text style={styles.alertDate}>
+          Issued: {new Date(alert.createdAt).toLocaleString()}
+        </Text>
+        
+        <View style={styles.messageContainer}>
+          <Text style={styles.alertMessage}>{alert.message}</Text>
+        </View>
+        
+        {/* Delivery Info */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Delivery</Text>
+          <View style={styles.channelsContainer}>
+            {alert.channels.includes('email') && (
+              <View style={styles.channelBadge}>
+                <Ionicons name="mail" size={16} color={COLORS.white} />
+                <Text style={styles.channelText}>Email</Text>
+              </View>
+            )}
+            {alert.channels.includes('sms') && (
+              <View style={styles.channelBadge}>
+                <Ionicons name="chatbubble" size={16} color={COLORS.white} />
+                <Text style={styles.channelText}>SMS</Text>
+              </View>
+            )}
+            {alert.channels.includes('push') && (
+              <View style={styles.channelBadge}>
+                <Ionicons name="notifications" size={16} color={COLORS.white} />
+                <Text style={styles.channelText}>Push</Text>
+              </View>
+            )}
           </View>
           
-          <View style={styles.infoRow}>
-            <Ionicons name="alert-circle-outline" size={20} color="#666666" />
-            <Text style={styles.infoText}>
-              Severity: <Text style={{ color: getSeverityColor(alert.severity), fontWeight: 'bold' }}>
-                {alert.severity.toUpperCase()}
-              </Text>
-            </Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={20} color="#666666" />
-            <Text style={styles.infoText}>
-              Created by: {alert.createdBy.username}
-            </Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Ionicons name="notifications-outline" size={20} color="#666666" />
-            <Text style={styles.infoText}>
-              Channels: {alert.channels.join(', ')}
-            </Text>
-          </View>
-          
-          {alert.acknowledged && alert.acknowledgedAt && (
-            <View style={styles.infoRow}>
-              <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
-              <Text style={styles.infoText}>
-                Acknowledged at: {formatDate(alert.acknowledgedAt)}
-              </Text>
+          {alert.deliveryStats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{alert.deliveryStats.sent}</Text>
+                <Text style={styles.statLabel}>Sent</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{alert.deliveryStats.delivered}</Text>
+                <Text style={styles.statLabel}>Delivered</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{alert.deliveryStats.failed}</Text>
+                <Text style={styles.statLabel}>Failed</Text>
+              </View>
             </View>
           )}
         </View>
         
-        {/* Acknowledgment button */}
-        {alert.status === 'active' && !alert.acknowledged && (
-          <TouchableOpacity
-            style={styles.acknowledgeButton}
-            onPress={handleAcknowledge}
-            disabled={isAcknowledging}
-          >
-            {isAcknowledging ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.acknowledgeButtonText}>
-                  Acknowledge Alert
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-        
-        {/* Alert acknowledged indicator */}
-        {alert.acknowledged && (
-          <View style={styles.acknowledgedContainer}>
-            <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
-            <Text style={styles.acknowledgedText}>
-              You have acknowledged this alert
-            </Text>
+        {/* Attachments (if any) */}
+        {alert.attachments && alert.attachments.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Attachments</Text>
+            {alert.attachments.map((attachment, index) => (
+              <TouchableOpacity key={index} style={styles.attachmentItem}>
+                <Ionicons 
+                  name={
+                    attachment.type.includes('image') ? 'image' : 
+                    attachment.type.includes('pdf') ? 'document' : 
+                    attachment.type.includes('video') ? 'videocam' : 
+                    'document-attach'
+                  } 
+                  size={24} 
+                  color={COLORS.primary} 
+                />
+                <Text style={styles.attachmentName}>{attachment.name}</Text>
+                <Ionicons name="download" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+            ))}
           </View>
         )}
+        
+        {/* Action Buttons */}
+        <View style={styles.actionContainer}>
+          {alert.status === 'active' && !hasUserAcknowledged ? (
+            <TouchableOpacity style={styles.acknowledgeButton} onPress={handleAcknowledge}>
+              <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
+              <Text style={styles.acknowledgeButtonText}>Acknowledge Alert</Text>
+            </TouchableOpacity>
+          ) : alert.status === 'active' && hasUserAcknowledged ? (
+            <View style={styles.acknowledgedContainer}>
+              <Ionicons name="checkmark-done-circle" size={24} color={COLORS.success} />
+              <Text style={styles.acknowledgedText}>You have acknowledged this alert</Text>
+            </View>
+          ) : null}
+          
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Ionicons name="share-social" size={20} color={COLORS.white} />
+            <Text style={styles.shareButtonText}>Share Alert</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -295,150 +292,211 @@ const AlertDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666666',
-  },
-  errorText: {
-    marginTop: 16,
-    marginBottom: 16,
-    fontSize: 18,
-    color: COLORS.danger,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  backButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
     padding: 16,
   },
-  headerContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  severityIndicator: {
-    width: 12,
-    alignSelf: 'stretch',
-  },
-  headerContent: {
+  loaderContainer: {
     flex: 1,
-    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 24,
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.danger,
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  retryText: {
+    color: COLORS.white,
     fontWeight: 'bold',
-    color: COLORS.dark,
-    marginBottom: 8,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  severityBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  severityText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   statusBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: COLORS.white,
     fontWeight: 'bold',
+    fontSize: 12,
   },
-  detailsContainer: {
-    backgroundColor: '#FFFFFF',
+  alertTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  alertDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  messageContainer: {
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
-  detailsTitle: {
+  alertMessage: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.dark,
+    color: '#333',
     marginBottom: 12,
   },
-  message: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333333',
-    marginBottom: 20,
-  },
-  infoRow: {
+  channelsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 15,
-    color: '#444444',
-    marginLeft: 10,
-  },
-  acknowledgeButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     marginBottom: 16,
   },
-  acknowledgeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  channelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  channelText: {
+    color: COLORS.white,
     fontWeight: 'bold',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 12,
+  },
+  actionContainer: {
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  acknowledgeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  acknowledgeButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: 16,
     marginLeft: 8,
   },
   acknowledgedContainer: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 8,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    backgroundColor: '#e6f7ef',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
   },
   acknowledgedText: {
     color: COLORS.success,
-    fontSize: 16,
     fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.info,
+    borderRadius: 8,
+    padding: 16,
+  },
+  shareButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: 16,
     marginLeft: 8,
   },
 });

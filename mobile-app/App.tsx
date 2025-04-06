@@ -1,71 +1,134 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import the simplified login screen (bypasses regular auth flow)
+// Import screens
 import SimplifiedLoginScreen from './src/screens/SimplifiedLoginScreen';
-import { COLORS } from './src/config';
+import DashboardScreen from './src/screens/DashboardScreen';
+import AlertsScreen from './src/screens/AlertsScreen';
+import AlertDetailScreen from './src/screens/AlertDetailScreen';
+
+// Import types and config
+import { COLORS, AUTH_CONFIG } from './src/config';
+import { RootStackParamList, User } from './src/types';
+
+// Create navigators
+const Stack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<RootStackParamList>();
+
+// Main tab navigator
+const MainTabs = () => {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          
+          if (route.name === 'Dashboard') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Alerts') {
+            iconName = focused ? 'warning' : 'warning-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else {
+            iconName = 'apps-outline';
+          }
+          
+          return <Ionicons name={iconName as any} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.dark,
+        headerStyle: {
+          backgroundColor: COLORS.primary,
+        },
+        headerTintColor: COLORS.white,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      <Tab.Screen name="Alerts" component={AlertsScreen} />
+    </Tab.Navigator>
+  );
+};
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem(AUTH_CONFIG.tokenStorageKey);
+        const userString = await AsyncStorage.getItem(AUTH_CONFIG.userStorageKey);
+        
+        if (token && userString) {
+          setUser(JSON.parse(userString));
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   // Handle successful login
   const handleLoginSuccess = (loginResult) => {
     console.log('Login successful with result:', JSON.stringify(loginResult));
     setUser(loginResult.user);
-    setLoggedIn(true);
+    setIsAuthenticated(true);
   };
 
-  // If not logged in, show the simplified login screen
-  if (!loggedIn) {
-    return (
-      <SafeAreaProvider>
-        <SimplifiedLoginScreen onLoginSuccess={handleLoginSuccess} />
-        <StatusBar style="auto" />
-      </SafeAreaProvider>
-    );
-  }
-
-  // Simple dashboard after login (for testing)
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Emergency Connect</Text>
-        </View>
+      <NavigationContainer>
+        <StatusBar style="light" />
         
-        <View style={styles.content}>
-          <View style={styles.userInfoCard}>
-            <Text style={styles.welcomeText}>Welcome, {user?.username || 'User'}!</Text>
-            <Text style={styles.userRole}>Role: {user?.role || 'Unknown'}</Text>
-            
-            <View style={styles.divider} />
-            
-            <Text style={styles.successText}>
-              Authentication successful! 🎉
-            </Text>
-            
-            <Text style={styles.infoText}>
-              You've successfully authenticated with the server. This simplified dashboard 
-              confirms your login information is correct.
-            </Text>
-          </View>
-          
-          <View style={styles.statusCard}>
-            <Text style={styles.statusTitle}>Connection Status</Text>
-            <View style={styles.statusItem}>
-              <View style={[styles.statusDot, { backgroundColor: COLORS.success }]} />
-              <Text style={styles.statusText}>Server connection: <Text style={styles.statusHighlight}>Active</Text></Text>
-            </View>
-          </View>
-        </View>
-        
-        <StatusBar style="auto" />
-      </SafeAreaView>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
+            <Stack.Screen name="SimplifiedLogin">
+              {(props) => (
+                <SimplifiedLoginScreen 
+                  {...props} 
+                  onLoginSuccess={handleLoginSuccess}
+                />
+              )}
+            </Stack.Screen>
+          ) : (
+            <>
+              <Stack.Screen name="Dashboard" component={MainTabs} />
+              <Stack.Screen 
+                name="AlertDetail" 
+                component={AlertDetailScreen} 
+                options={{ 
+                  headerShown: true, 
+                  title: 'Alert Details',
+                  headerStyle: {
+                    backgroundColor: COLORS.primary,
+                  },
+                  headerTintColor: COLORS.white,
+                  headerTitleStyle: {
+                    fontWeight: 'bold',
+                  }
+                }} 
+              />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
