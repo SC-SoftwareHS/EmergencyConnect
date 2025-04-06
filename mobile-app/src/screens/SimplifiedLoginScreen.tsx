@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import debugService from '../services/debugService';
 
 // This is a simplified login screen that bypasses the context system
 // to test direct API connectivity with our server
@@ -25,6 +26,31 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [serverUrl, setServerUrl] = useState('http://workspace.graftssalable0o.replit.app');
+  const [serverStatus, setServerStatus] = useState<any>(null);
+  const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
+  
+  // Load server status on mount
+  useEffect(() => {
+    const checkServer = async () => {
+      setDiagnosticsRunning(true);
+      try {
+        const status = await debugService.getServerStatus();
+        setServerStatus(status);
+        
+        if (status && status.success) {
+          setErrorMessage('');
+        } else {
+          setErrorMessage('Server not reachable. Please check the URL.');
+        }
+      } catch (error) {
+        setErrorMessage('Failed to connect to server.');
+      } finally {
+        setDiagnosticsRunning(false);
+      }
+    };
+    
+    checkServer();
+  }, [serverUrl]);
   
   // Handle login button press with direct API call
   const handleLogin = async () => {
@@ -40,15 +66,46 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
     try {
       console.log(`Making direct API request to ${serverUrl}/api/auth/login`);
       
-      const response = await axios.post(`${serverUrl}/api/auth/login`, {
-        username,
-        password
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
+      // Try two different methods to handle potential CORS or SSL issues
+      let response;
+      
+      try {
+        // First attempt: Use axios with full settings
+        response = await axios.post(`${serverUrl}/api/auth/login`, {
+          username,
+          password
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 15000,
+          withCredentials: true
+        });
+      } catch (firstError) {
+        console.log('First login attempt failed, trying alternate method:', firstError.message);
+        
+        // Second attempt: Simpler fetch approach with default settings
+        const fetchResponse = await fetch(`${serverUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username,
+            password
+          })
+        });
+        
+        if (!fetchResponse.ok) {
+          throw new Error(`HTTP error! Status: ${fetchResponse.status}`);
+        }
+        
+        // Convert fetch response to match axios format
+        response = {
+          data: await fetchResponse.json()
+        };
+      }
       
       console.log('Login API response:', JSON.stringify(response.data));
       
@@ -69,14 +126,19 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      console.error('Error details:', error.response?.data);
+      if (error.response) console.error('Error details:', error.response?.data);
       
+      // More detailed error handling
       if (error.response) {
         // Server responded with an error
-        setErrorMessage(error.response.data.message || `Error ${error.response.status}: ${error.response.statusText}`);
+        const errorMsg = error.response.data?.message || `Error ${error.response.status}: ${error.response.statusText}`;
+        setErrorMessage(errorMsg);
       } else if (error.request) {
         // No response received
-        setErrorMessage('No response from server. Check your internet connection.');
+        setErrorMessage('No response from server. Check your internet connection or try a different server URL.');
+      } else if (error.message && error.message.includes('Network Error')) {
+        // Common RN network error
+        setErrorMessage('Network error. Check that the server URL is correct and accessible.');
       } else {
         // Request setup error
         setErrorMessage(`Error: ${error.message}`);
@@ -170,6 +232,77 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
             }}
           >
             <Text style={styles.debugButtonText}>Fill Admin Credentials</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.altButton, diagnosticsRunning && styles.buttonDisabled]}
+            onPress={async () => {
+              setIsLoading(true);
+              setErrorMessage('');
+              try {
+                const result = await debugService.getDirectToken('admin');
+                if (result) {
+                  Alert.alert('Success', 'Got debug token for admin user!');
+                  // Get user from storage and call onLoginSuccess
+                  const userString = await AsyncStorage.getItem('emergencyAlertUser');
+                  const token = await AsyncStorage.getItem('emergencyAlertAuthToken');
+                  if (userString && token) {
+                    const user = JSON.parse(userString);
+                    onLoginSuccess({ user, token });
+                  }
+                } else {
+                  setErrorMessage('Failed to get debug token');
+                }
+              } catch (error) {
+                setErrorMessage('Error getting debug token: ' + error.message);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={diagnosticsRunning || isLoading}
+          >
+            <Text style={styles.altButtonText}>Get Debug Token</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.altButton, diagnosticsRunning && styles.buttonDisabled]}
+            onPress={async () => {
+              setDiagnosticsRunning(true);
+              setErrorMessage('');
+              try {
+                const results = await debugService.runDiagnostics();
+                console.log('Diagnostics results:', results);
+                
+                if (results.serverOnline) {
+                  if (results.authWorks) {
+                    Alert.alert('Success', 'Server is online and debug token obtained successfully!');
+                    
+                    // Get user from storage and call onLoginSuccess if token is valid
+                    if (results.tokenValid) {
+                      const userString = await AsyncStorage.getItem('emergencyAlertUser');
+                      const token = await AsyncStorage.getItem('emergencyAlertAuthToken');
+                      if (userString && token) {
+                        const user = JSON.parse(userString);
+                        onLoginSuccess({ user, token });
+                      }
+                    } else {
+                      setErrorMessage('Server online but token validation failed. Try login again.');
+                    }
+                  } else {
+                    setErrorMessage('Server is online but auth failed. ' + results.errorMessages.join(', '));
+                  }
+                } else {
+                  setErrorMessage('Server diagnostics failed: ' + results.errorMessages.join(', '));
+                }
+              } catch (error) {
+                setErrorMessage('Diagnostics error: ' + error.message);
+              } finally {
+                setDiagnosticsRunning(false);
+              }
+            }}
+            disabled={diagnosticsRunning || isLoading}
+          >
+            <Text style={styles.altButtonText}>Run Diagnostics</Text>
           </TouchableOpacity>
         </View>
         
@@ -279,6 +412,18 @@ const styles = StyleSheet.create({
   debugButtonText: {
     color: COLORS.info,
     fontSize: 14,
+  },
+  altButton: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  altButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 40,

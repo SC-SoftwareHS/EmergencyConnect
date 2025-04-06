@@ -10,6 +10,8 @@ const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const userRoutes = require('./routes/userRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
+const debugRoutes = require('./routes/debugRoutes');
+const mobileDebugRoutes = require('./routes/mobileDebugRoutes');
 
 // Initialize database
 const { db, pool } = require('./db');
@@ -60,8 +62,21 @@ io.use(async (socket, next) => {
   }
 });
 
-// Middleware
-app.use(cors());
+// Middleware - Enhanced CORS settings for mobile app
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+}));
+
+// Log and handle preflight requests
+app.options('*', (req, res) => {
+  console.log('Received preflight request from:', req.headers.origin);
+  res.status(200).end();
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -189,6 +204,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/debug', debugRoutes);
+app.use('/mobile-debug', mobileDebugRoutes);
 
 // Serve React app for any other routes
 app.get('*', (req, res) => {

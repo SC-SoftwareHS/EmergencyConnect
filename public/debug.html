@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Alert System - Debug Tools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .btn {
+      @apply px-4 py-2 rounded-md font-medium transition duration-200;
+    }
+    .btn-primary {
+      @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+    }
+    .btn-secondary {
+      @apply bg-gray-500 text-white hover:bg-gray-600 focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50;
+    }
+    .btn-success {
+      @apply bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-opacity-50;
+    }
+    .btn-danger {
+      @apply bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-opacity-50;
+    }
+    .card {
+      @apply bg-white rounded-lg shadow-md p-6 mb-4;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto max-w-4xl py-8 px-4">
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-800">Emergency Alert System</h1>
+      <p class="text-gray-600 mt-2">Development Debug Tools</p>
+    </header>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Server Status</h2>
+      <div id="serverStatus" class="p-4 bg-gray-50 rounded-md text-sm font-mono mb-4">
+        Loading server status...
+      </div>
+      <button id="checkStatusBtn" class="btn btn-primary">Check Server Status</button>
+    </div>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Quick Login</h2>
+      <p class="text-gray-600 mb-4">Get a debug token for testing. This will bypass normal authentication.</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <button id="adminLoginBtn" class="btn btn-primary">Login as Admin</button>
+        <button id="operatorLoginBtn" class="btn btn-primary">Login as Operator</button>
+        <button id="subscriberLoginBtn" class="btn btn-primary">Login as Subscriber</button>
+      </div>
+      
+      <div id="tokenResult" class="hidden p-4 bg-gray-50 rounded-md">
+        <h3 class="font-semibold mb-2">Token Generated</h3>
+        <div class="text-xs font-mono overflow-x-auto whitespace-nowrap mb-2" id="tokenValue">
+          [Token will appear here]
+        </div>
+        <div class="mb-4">
+          <span class="font-semibold">User:</span>
+          <span id="tokenUser">Username will appear here</span>
+        </div>
+        <button id="copyTokenBtn" class="btn btn-secondary text-sm">Copy Token</button>
+        <button id="redirectBtn" class="btn btn-success text-sm ml-2">Go to Dashboard</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Mobile App Testing</h2>
+      <p class="text-gray-600 mb-4">Instructions for testing with mobile app:</p>
+      <ol class="list-decimal pl-5 space-y-2 text-gray-700 mb-4">
+        <li>Make sure server is running (check status above)</li>
+        <li>Use the "Direct Token" API in the mobile app's debug mode</li>
+        <li>Or click one of the buttons above to get a token</li>
+        <li>Use server URL: <span class="font-mono text-xs" id="serverUrl">Loading...</span></li>
+      </ol>
+    </div>
+
+    <div class="text-center text-gray-500 text-sm mt-8">
+      For development purposes only. Not for production use.
+    </div>
+  </div>
+
+  <script>
+    // Get DOM elements
+    const serverStatusEl = document.getElementById('serverStatus');
+    const checkStatusBtn = document.getElementById('checkStatusBtn');
+    const adminLoginBtn = document.getElementById('adminLoginBtn');
+    const operatorLoginBtn = document.getElementById('operatorLoginBtn');
+    const subscriberLoginBtn = document.getElementById('subscriberLoginBtn');
+    const tokenResultEl = document.getElementById('tokenResult');
+    const tokenValueEl = document.getElementById('tokenValue');
+    const tokenUserEl = document.getElementById('tokenUser');
+    const copyTokenBtn = document.getElementById('copyTokenBtn');
+    const redirectBtn = document.getElementById('redirectBtn');
+    const serverUrlEl = document.getElementById('serverUrl');
+
+    // Set server URL
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const baseUrl = `${protocol}//${host}`;
+    serverUrlEl.textContent = baseUrl;
+
+    // Check server status
+    async function checkServerStatus() {
+      serverStatusEl.innerHTML = 'Checking server status...';
+      
+      try {
+        const response = await fetch(`${baseUrl}/api/debug/status`);
+        const data = await response.json();
+        
+        if (data.success) {
+          serverStatusEl.innerHTML = `
+            <div class="text-green-600 font-semibold mb-2">Server Online</div>
+            <div><span class="font-semibold">Version:</span> ${data.version}</div>
+            <div><span class="font-semibold">Node:</span> ${data.node_version}</div>
+            <div><span class="font-semibold">Uptime:</span> ${Math.floor(data.uptime)} seconds</div>
+            <div><span class="font-semibold">Timestamp:</span> ${new Date(data.timestamp).toLocaleString()}</div>
+          `;
+        } else {
+          serverStatusEl.innerHTML = `<div class="text-red-600">Server status check failed</div>`;
+        }
+      } catch (error) {
+        serverStatusEl.innerHTML = `
+          <div class="text-red-600 font-semibold">Error connecting to server</div>
+          <div>${error.message}</div>
+        `;
+      }
+    }
+
+    // Get a debug token
+    async function getDebugToken(username) {
+      try {
+        const response = await fetch(`${baseUrl}/api/debug/direct-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Store token and user in localStorage
+          localStorage.setItem('emergencyAlertAuthToken', data.data.token);
+          localStorage.setItem('emergencyAlertUser', JSON.stringify(data.data.user));
+          
+          // Display token information
+          tokenValueEl.textContent = data.data.token;
+          tokenUserEl.textContent = `${data.data.user.username} (${data.data.user.role})`;
+          tokenResultEl.classList.remove('hidden');
+          
+          return data.data;
+        } else {
+          alert(`Error: ${data.message}`);
+          return null;
+        }
+      } catch (error) {
+        alert(`Error getting token: ${error.message}`);
+        return null;
+      }
+    }
+
+    // Event listeners
+    checkStatusBtn.addEventListener('click', checkServerStatus);
+    
+    adminLoginBtn.addEventListener('click', () => getDebugToken('admin'));
+    operatorLoginBtn.addEventListener('click', () => getDebugToken('operator'));
+    subscriberLoginBtn.addEventListener('click', () => getDebugToken('subscriber'));
+    
+    copyTokenBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(tokenValueEl.textContent.trim())
+        .then(() => {
+          const originalText = copyTokenBtn.textContent;
+          copyTokenBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyTokenBtn.textContent = originalText;
+          }, 2000);
+        })
+        .catch(err => {
+          alert('Failed to copy token: ' + err);
+        });
+    });
+    
+    redirectBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+
+    // Init
+    checkServerStatus();
+  </script>
+</body>
+</html>
