@@ -16,7 +16,7 @@ This guide provides instructions for testing the Emergency Alert System mobile a
 The API configuration in `mobile-app/src/config.ts` has been updated to point to the Replit deployment. Make sure it contains your actual Replit URL:
 
 ```typescript
-const DEFAULT_API_URL = 'https://your-app-name.replit.app';
+const DEFAULT_API_URL = 'https://emergency-connect.replit.app';
 ```
 
 ### 2. Install Dependencies

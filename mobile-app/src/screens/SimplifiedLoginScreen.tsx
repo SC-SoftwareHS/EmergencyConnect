@@ -25,7 +25,7 @@ const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [serverUrl, setServerUrl] = useState('http://workspace.graftssalable0o.replit.app');
+  const [serverUrl, setServerUrl] = useState('http://emergency-connect.replit.app');
   const [serverStatus, setServerStatus] = useState<any>(null);
   const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
   

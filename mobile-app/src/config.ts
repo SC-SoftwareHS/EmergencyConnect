@@ -7,7 +7,7 @@
 
 // Directly use the Replit URL without any redirection
 // Fix: removed https: protocol which might be causing issues with certificate validation
-const DEFAULT_API_URL = 'http://workspace.graftssalable0o.replit.app';
+const DEFAULT_API_URL = 'http://emergency-connect.replit.app';
 
 // Fallback local URL for testing
 const LOCAL_API_URL = 'http://localhost:5000';
