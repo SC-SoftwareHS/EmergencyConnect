@@ -117,3 +117,24 @@ export interface NotificationPreferences {
   push: boolean;
   alertSeverityThreshold: 'critical' | 'high' | 'medium' | 'low' | 'all';
 }
+
+// Notification Template type definitions
+export interface NotificationTemplate {
+  id: number;
+  name: string;
+  description?: string;
+  type: 'alert' | 'incident' | 'status' | 'custom';
+  category: string; // 'emergency', 'weather', 'security', etc.
+  title: string;
+  content: string;
+  variables: string[]; // ['location', 'severity', 'time', etc.]
+  translations: Record<string, { title: string; content: string }>; // { 'es': { title: '...', content: '...' } }
+  channels: string[]; // ['email', 'sms', 'push']
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  createdBy: number; // User ID
+  createdAt: string;
+  updatedAt?: string;
+  isActive: boolean;
+}
+
+export interface InsertNotificationTemplate extends Omit<NotificationTemplate, 'id' | 'createdAt' | 'updatedAt'> {}

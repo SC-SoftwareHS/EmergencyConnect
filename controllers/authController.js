@@ -1,7 +1,10 @@
 /**
  * Authentication controller for the emergency alert system
  */
-const { userDB } = require('../services/databaseService');
+const { db } = require('../db');
+const { users } = require('../shared/schema');
+const { eq } = require('drizzle-orm');
+const bcrypt = require('bcryptjs');
 const { generateToken } = require('../middleware/auth');
 const { isValidEmail, isValidPassword, validateUserData } = require('../utils/validators');
 
@@ -27,13 +30,19 @@ const login = async (req, res) => {
     
     let user;
     
-    // Find user by email or username
+    // Find user by email or username directly from the database
     if (email) {
       console.log('Attempting to find user by email:', email);
-      user = await userDB.findByEmail(email);
+      const [foundUser] = await db.select()
+        .from(users)
+        .where(eq(users.email, email));
+      user = foundUser;
     } else if (username) {
       console.log('Attempting to find user by username:', username);
-      user = await userDB.findByUsername(username);
+      const [foundUser] = await db.select()
+        .from(users)
+        .where(eq(users.username, username));
+      user = foundUser;
     }
     
     // If user not found, return unauthorized
@@ -47,8 +56,8 @@ const login = async (req, res) => {
     
     console.log('User found, validating password');
     
-    // Validate password
-    const isValidPass = await userDB.validatePassword(user, password);
+    // Validate password with bcrypt
+    const isValidPass = await bcrypt.compare(password, user.password);
     
     // If password is incorrect, return unauthorized
     if (!isValidPass) {
@@ -112,7 +121,9 @@ const register = async (req, res) => {
     }
     
     // Check if email already exists
-    const existingUser = await userDB.findByEmail(userData.email);
+    const [existingUser] = await db.select()
+      .from(users)
+      .where(eq(users.email, userData.email));
     
     if (existingUser) {
       return res.status(400).json({
@@ -122,7 +133,9 @@ const register = async (req, res) => {
     }
     
     // Check if username already exists
-    const existingUsername = await userDB.findByUsername(userData.username);
+    const [existingUsername] = await db.select()
+      .from(users)
+      .where(eq(users.username, userData.username));
     
     if (existingUsername) {
       return res.status(400).json({
@@ -134,8 +147,16 @@ const register = async (req, res) => {
     // By default, new users are subscribers
     userData.role = userData.role || 'subscriber';
     
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    
     // Create new user
-    const newUser = await userDB.create(userData);
+    const [newUser] = await db.insert(users)
+      .values({
+        ...userData,
+        password: hashedPassword
+      })
+      .returning();
     
     // Generate JWT token
     const token = generateToken(newUser);
@@ -215,8 +236,19 @@ const updateProfile = async (req, res) => {
       delete updates.role;
     }
     
+    // If password is being updated, hash it
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+    
     // Update user
-    const updatedUser = await userDB.update(req.user.id, updates);
+    const [updatedUser] = await db.update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, req.user.id))
+      .returning();
     
     if (!updatedUser) {
       return res.status(404).json({

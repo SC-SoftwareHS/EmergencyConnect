@@ -2,7 +2,9 @@
  * Authentication middleware for the emergency alert system
  */
 const jwt = require('jsonwebtoken');
-const { userDB } = require('../services/databaseService');
+const { db } = require('../db');
+const { users } = require('../shared/schema');
+const { eq } = require('drizzle-orm');
 
 // Secret key for JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'emergency-alert-system-secret-key';
@@ -49,8 +51,10 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('Token verified successfully for user ID:', decoded.userId);
     
-    // Find user
-    const user = await userDB.findById(decoded.userId);
+    // Find user directly from the database
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, decoded.userId));
     
     // If user not found, return unauthorized
     if (!user) {

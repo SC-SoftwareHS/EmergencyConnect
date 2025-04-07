@@ -4,6 +4,7 @@
 const { alertDB, userDB, subscriptionDB } = require('../services/databaseService');
 const { validateAlertData } = require('../utils/validators');
 const notificationService = require('../services/notificationService');
+const templateService = require('../services/templateService');
 
 /**
  * Create a new alert
@@ -15,6 +16,9 @@ const createAlert = async (req, res) => {
   
   // Add creator ID
   alertData.createdBy = req.user.id;
+  
+  // Check if alert is from a template
+  const fromTemplate = req.templateId ? true : false;
   
   // Validate alert data
   const validation = validateAlertData(alertData);
@@ -33,6 +37,14 @@ const createAlert = async (req, res) => {
     if (alertData.status === 'sent' || !alertData.status) {
       alertData.sentAt = new Date();
       alertData.status = 'sent';
+    }
+    
+    // If using a template, add a reference to the template
+    if (fromTemplate) {
+      alertData.fromTemplate = {
+        id: req.templateId,
+        usedAt: new Date().toISOString()
+      };
     }
     
     // Create alert
@@ -75,10 +87,11 @@ const createAlert = async (req, res) => {
     // Return success with alert data
     res.status(201).json({
       success: true,
-      message: 'Alert created and sent successfully.',
+      message: fromTemplate ? 'Alert created from template and sent successfully.' : 'Alert created and sent successfully.',
       data: {
         alert: newAlert,
-        stats
+        stats,
+        fromTemplate: fromTemplate ? { id: req.templateId } : undefined
       }
     });
   } catch (error) {

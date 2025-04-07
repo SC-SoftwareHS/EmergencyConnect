@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const userRoutes = require('./routes/userRoutes');
 const incidentRoutes = require('./routes/incidentRoutes');
+const templateRoutes = require('./routes/templateRoutes');
 const debugRoutes = require('./routes/debugRoutes');
 const mobileDebugRoutes = require('./routes/mobileDebugRoutes');
 
@@ -204,6 +205,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/templates', templateRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/mobile-debug', mobileDebugRoutes);
 

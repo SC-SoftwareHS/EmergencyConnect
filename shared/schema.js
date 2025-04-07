@@ -1,7 +1,7 @@
 /**
  * Database schema for the Emergency Alert System using Drizzle ORM
  */
-const { pgTable, serial, text, timestamp, boolean, integer, jsonb } = require('drizzle-orm/pg-core');
+const { pgTable, serial, text, timestamp, boolean, integer, jsonb, varchar } = require('drizzle-orm/pg-core');
 const { relations } = require('drizzle-orm');
 
 // Define tables first
@@ -55,6 +55,25 @@ const subscriptions = pgTable('subscriptions', {
   active: boolean('active').notNull().default(true)
 });
 
+// Notification Templates table
+const notificationTemplates = pgTable('notification_templates', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: text('description'),
+  type: varchar('type', { length: 50 }).notNull(), // 'alert', 'incident', etc.
+  category: varchar('category', { length: 50 }).notNull(), // 'emergency', 'weather', 'security', etc.
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  variables: jsonb('variables').notNull().default([]), // ['location', 'severity', 'time', etc.]
+  translations: jsonb('translations').notNull().default({}), // { 'es': { title: '...', content: '...' } }
+  channels: jsonb('channels').notNull().default(['email']), // ['email', 'sms', 'push']
+  severity: varchar('severity', { length: 20 }).notNull().default('medium'),
+  createdBy: integer('created_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  isActive: boolean('is_active').notNull().default(true)
+});
+
 // Incidents table
 const incidents = pgTable('incidents', {
   id: serial('id').primaryKey(),
@@ -77,7 +96,8 @@ const incidents = pgTable('incidents', {
 const usersRelations = relations(users, ({ many }) => ({
   alerts: many(alerts, { relationName: 'user_alerts' }),
   subscriptions: many(subscriptions),
-  incidents: many(incidents)
+  incidents: many(incidents),
+  templates: many(notificationTemplates, { relationName: 'user_templates' })
 }));
 
 // Alert-to-other-tables relations
@@ -123,16 +143,27 @@ const incidentsRelations = relations(incidents, ({ one }) => ({
   })
 }));
 
+// NotificationTemplate-to-other-tables relations
+const notificationTemplatesRelations = relations(notificationTemplates, ({ one }) => ({
+  creator: one(users, {
+    fields: [notificationTemplates.createdBy],
+    references: [users.id],
+    relationName: 'user_templates'
+  })
+}));
+
 module.exports = {
   users,
   alerts,
   alertAcknowledgments,
   subscriptions,
   incidents,
+  notificationTemplates,
   // Export relations for use in queries
   usersRelations,
   alertsRelations,
   alertAcknowledgmentsRelations,
   subscriptionsRelations,
-  incidentsRelations
+  incidentsRelations,
+  notificationTemplatesRelations
 };
