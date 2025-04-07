@@ -10,7 +10,8 @@ const {
   deleteAlert,
   cancelAlert,
   getAlertAnalytics,
-  acknowledgeAlert
+  acknowledgeAlert,
+  createPanicAlert
 } = require('../controllers/alertController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -107,6 +108,17 @@ router.post(
   '/:id/acknowledge',
   authenticate,
   acknowledgeAlert
+);
+
+/**
+ * @route POST /api/alerts/panic
+ * @desc Create a panic alert (high-priority emergency)
+ * @access Private (all authenticated users)
+ */
+router.post(
+  '/panic',
+  authenticate,
+  createPanicAlert
 );
 
 module.exports = router;

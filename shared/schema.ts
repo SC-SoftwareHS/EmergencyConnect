@@ -30,7 +30,7 @@ export interface Alert {
   title: string;
   message: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
-  status: 'active' | 'cancelled' | 'resolved' | 'expired' | 'draft';
+  status: 'active' | 'cancelled' | 'resolved' | 'expired' | 'draft' | 'sent';
   createdBy: number; // User ID
   createdAt: string;
   updatedAt?: string;
@@ -60,6 +60,14 @@ export interface Alert {
     url: string;
     name: string;
   }[];
+  // Panic alert specific properties
+  panicAlert?: boolean;
+  location?: string;
+  userDetails?: {
+    username: string;
+    phoneNumber?: string;
+    email: string;
+  };
 }
 
 export interface InsertAlert extends Omit<Alert, 'id' | 'createdAt' | 'updatedAt' | 'acknowledgments'> {}

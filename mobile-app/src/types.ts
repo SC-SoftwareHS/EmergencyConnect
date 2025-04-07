@@ -1,8 +1,16 @@
 // Navigation types
 export type RootStackParamList = {
   Login: undefined;
+  SimplifiedLogin: undefined;
   Dashboard: undefined;
+  Alerts: undefined;
   AlertDetail: { alertId: string };
+  Incidents: undefined;
+  IncidentDetail: { incidentId: string };
+  IncidentReport: undefined;
+  Profile: undefined;
+  Settings: undefined;
+  PanicAlert: undefined;
 };
 
 // User types
@@ -53,6 +61,34 @@ export interface AlertsState {
   alerts: Alert[];
   isLoading: boolean;
   error: string | null;
+}
+
+// Incident types
+export interface Incident {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  status: 'reported' | 'investigating' | 'resolved' | 'closed' | 'cancelled';
+  reportedBy: {
+    id: number;
+    username: string;
+  };
+  reportedAt: string;
+  updatedAt: string;
+  responses?: Array<{
+    id: string;
+    action: string;
+    notes: string;
+    timestamp: string;
+    user: {
+      id: number;
+      username: string;
+    };
+  }>;
+  attachments?: string[];
+  relatedAlertId?: string;
 }
 
 // API Response types

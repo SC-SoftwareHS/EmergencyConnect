@@ -5,6 +5,9 @@ const { alertDB, userDB, subscriptionDB } = require('../services/databaseService
 const { validateAlertData } = require('../utils/validators');
 const notificationService = require('../services/notificationService');
 const templateService = require('../services/templateService');
+const { db } = require('../db');
+const { alerts, users } = require('../shared/schema');
+const { eq } = require('drizzle-orm');
 
 /**
  * Create a new alert
@@ -566,6 +569,118 @@ const acknowledgeAlert = async (req, res) => {
   }
 };
 
+/**
+ * Create a panic alert (high-priority emergency alert)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const createPanicAlert = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get user details for location information
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+    
+    // Set up panic alert data with pre-defined severity and channels
+    const panicAlertData = {
+      title: 'URGENT: Panic Alert',
+      message: `Emergency panic alert triggered by ${user.username}. Immediate assistance required.`,
+      severity: 'critical',
+      status: 'sent',
+      createdBy: userId,
+      sentAt: new Date(),
+      channels: ['sms', 'push', 'email'],
+      targeting: {
+        roles: ['admin', 'operator'],
+        all: true
+      },
+      panicAlert: true,
+      location: req.body.location || 'Unknown location',
+      userDetails: {
+        username: user.username,
+        phoneNumber: user.phoneNumber || 'Not available',
+        email: user.email
+      }
+    };
+    
+    console.log('Creating panic alert:', panicAlertData);
+    
+    // Create the alert directly in the database
+    const [newAlert] = await db.insert(alerts)
+      .values(panicAlertData)
+      .returning();
+    
+    // Identify recipients based on targeting criteria
+    const recipients = await identifyRecipients(panicAlertData.targeting);
+    
+    // Send notifications with high priority
+    const notificationOptions = {
+      priority: 'high',
+      ttl: 60 * 60, // 1 hour in seconds
+      sound: 'default'
+    };
+    
+    const notificationResults = await notificationService.sendAlertNotifications(
+      newAlert,
+      recipients,
+      notificationOptions
+    );
+    
+    // Update alert with delivery statistics
+    const stats = {
+      total: recipients.length,
+      sent: notificationResults.filter(r => r.success).length,
+      failed: notificationResults.filter(r => !r.success).length,
+      pending: 0
+    };
+    
+    // Broadcast to all connected clients
+    req.io.emit('panicAlert', {
+      alert: newAlert,
+      user: {
+        id: user.id,
+        username: user.username
+      }
+    });
+    
+    // Send targeted notifications to specific users
+    recipients.forEach(recipient => {
+      req.io.to(`user-${recipient.id}`).emit('personalAlert', {
+        alert: newAlert,
+        priority: 'critical'
+      });
+    });
+    
+    // Return success response
+    return res.status(201).json({
+      success: true,
+      message: 'Panic alert sent successfully.',
+      data: {
+        alert: newAlert,
+        stats
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error creating panic alert:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create panic alert.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   createAlert,
   getAllAlerts,
@@ -574,5 +689,6 @@ module.exports = {
   deleteAlert,
   cancelAlert,
   getAlertAnalytics,
-  acknowledgeAlert
+  acknowledgeAlert,
+  createPanicAlert
 };

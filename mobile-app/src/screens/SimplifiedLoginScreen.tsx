@@ -24,9 +24,14 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import debugService from '../services/debugService';
 
+interface SimplifiedLoginScreenProps {
+  onLoginSuccess?: () => void;
+  navigation?: any;
+}
+
 // This is a simplified login screen that bypasses the context system
 // to test direct API connectivity with our server
-const SimplifiedLoginScreen = ({ onLoginSuccess }) => {
+const SimplifiedLoginScreen: React.FC<SimplifiedLoginScreenProps> = ({ onLoginSuccess, navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);

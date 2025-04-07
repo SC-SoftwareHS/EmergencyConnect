@@ -16,6 +16,7 @@ import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 import IncidentReportScreen from '../screens/IncidentReportScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import PanicAlertScreen from '../screens/PanicAlertScreen';
 
 // Create navigators
 const Stack = createStackNavigator<RootStackParamList>();
@@ -39,6 +40,8 @@ const MainTabNavigator = () => {
             iconName = focused ? 'person' : 'person-outline';
           } else if (route.name === 'Settings') {
             iconName = focused ? 'settings' : 'settings-outline';
+          } else if (route.name === 'PanicAlert') {
+            iconName = focused ? 'warning' : 'warning-outline';
           } else {
             iconName = 'help-circle-outline';
           }
@@ -66,6 +69,22 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Alerts" component={AlertsScreen} />
       <Tab.Screen name="Incidents" component={IncidentsScreen} />
+      <Tab.Screen 
+        name="PanicAlert" 
+        component={PanicAlertScreen} 
+        options={{
+          title: 'Emergency',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? 'alert-circle' : 'alert-circle-outline'} 
+              size={size} 
+              color="#ff3b30" 
+            />
+          ),
+          tabBarLabel: 'Emergency',
+          tabBarActiveTintColor: '#ff3b30'
+        }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
@@ -132,6 +151,7 @@ const AppNavigator = () => {
         <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
         <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} />
         <Stack.Screen name="IncidentReport" component={IncidentReportScreen} />
+        <Stack.Screen name="PanicAlert" component={PanicAlertScreen} options={{ title: "Emergency Alert" }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -177,6 +177,25 @@ export const alertsApi = {
       };
     }
   },
+  
+  // Create a panic alert
+  createPanicAlert: async (locationData?: any): Promise<ApiResponse<Alert>> => {
+    try {
+      const response: AxiosResponse = await api.post('/api/alerts/panic', { location: locationData });
+      return { 
+        success: true, 
+        data: response.data.data.alert,
+        error: undefined
+      };
+    } catch (error: any) {
+      console.error('Panic alert error:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to send panic alert.',
+        data: undefined
+      };
+    }
+  },
 };
 
 // Incidents API calls
